@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, User, LogOut } from 'lucide-react';
+import {  User, LogOut } from 'lucide-react';
 import { toast } from '../../utils/toast';
 import { auth } from '../../../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -68,7 +68,7 @@ export const Header = () => {
             className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             aria-label="Notifications"
           >
-            <Bell size={20} />
+            {/* <Bell size={20} /> */}
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
           

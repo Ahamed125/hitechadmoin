@@ -2733,19 +2733,19 @@ export const Contact = () => {
                 </Card>
 
                 {/* Inquiry Types */}
-                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                  <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-b border-orange-200">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-xl font-bold text-gray-900">Inquiry Types</CardTitle>
-                      <Button 
-                        onClick={() => openModal('inquiry')}
-                        className="bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-200"
-                      >
-                        <Plus size={16} className="mr-2" />
-                        Add Inquiry Type
-                      </Button>
-                    </div>
-                  </CardHeader>
+                <Card className="border-0 shadow-xl bg-white/80 ">
+  <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-b border-orange-200">
+    <div className="flex items-center justify-between">
+      <CardTitle className="text-xl font-bold text-gray-900">Inquiry Types</CardTitle>
+      <Button 
+        onClick={() => openModal('inquiry')}
+        className="bg-white text-red-700 border-2 border-red-600 hover:bg-red-50 hover:text-red-800 transition-colors duration-200"
+      >
+        <Plus size={16} className="mr-2" />
+        Add Inquiry Type
+      </Button>
+    </div>
+  </CardHeader>
                   <CardContent className="p-6">
                     <div className="space-y-4">
                       {contact.contactForm?.inquiryTypes?.map((type, index) => (
@@ -2767,13 +2767,13 @@ export const Contact = () => {
                             </div>
                           </div>
                           <div className="flex gap-2 ml-4">
-                            <Button
-                              size="sm"
-                              onClick={() => openModal('inquiry', type)}
-                              className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
-                            >
-                              <Edit size={16} />
-                            </Button>
+<Button
+  size="sm"
+  onClick={() => openModal('inquiry', type)}
+  className="bg-blue-300 text-blue-1000 hover:bg-blue-200 border-blue-400"
+>
+  <Edit size={16} />
+</Button>
                             <Button
                               variant="danger"
                               size="sm"
@@ -2795,20 +2795,20 @@ export const Contact = () => {
                 </Card>
 
                 {/* Programs */}
-                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                  <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-b border-orange-200">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-xl font-bold text-gray-900">Programs of Interest</CardTitle>
-                      <Button 
-                        onClick={() => openModal('program')}
-                        className="bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-200"
-                      >
-                        <Plus size={16} className="mr-2" />
-                        Add Program
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
+<Card className="border-0 shadow-xl bg-white/80">
+  <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-b border-orange-200">
+    <div className="flex items-center justify-between">
+      <CardTitle className="text-xl font-bold text-gray-900">Programs of Interest</CardTitle>
+      <Button 
+        onClick={() => openModal('program')}
+        className="bg-white text-red-700 border-2 border-red-600 hover:bg-red-50 hover:text-red-800 transition-colors duration-200"
+      >
+        <Plus size={16} className="mr-2" />
+        Add Program
+      </Button>
+    </div>
+  </CardHeader>
+        <CardContent className="p-6">
                     <div className="space-y-4">
                       {contact.contactForm?.programs?.map((program, index) => (
                         <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
@@ -2832,7 +2832,7 @@ export const Contact = () => {
                             <Button
                               size="sm"
                               onClick={() => openModal('program', program)}
-                              className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                             className="bg-blue-300 text-blue-1000 hover:bg-blue-200 border-blue-400"
                             >
                               <Edit size={16} />
                             </Button>

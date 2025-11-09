@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Users, BookOpen, TrendingUp, Award, Plus, ArrowUpRight, ChevronRight, UserPlus, LogOut } from 'lucide-react';
+import { Users, BookOpen, TrendingUp, Award, Plus, ArrowUpRight, ChevronRight, UserPlus } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
-import { auth, saveToFirebase, COLLECTIONS } from '../../firebase';
+import { auth } from '../../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { toast } from '../utils/toast';
 
@@ -84,15 +84,8 @@ export const Dashboard = () => {
     setCreatingAccount(true);
 
     try {
-      // Create new user
-      const userCredential = await createUserWithEmailAndPassword(auth, newUserData.email, newUserData.password);
-      
-      // Create initial user profile in Firestore
-      await saveToFirebase(COLLECTIONS.SETTINGS, {
-        adminUsers: [newUserData.email],
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString()
-      });
+      // Create new user in Firebase Authentication only
+      await createUserWithEmailAndPassword(auth, newUserData.email, newUserData.password);
       
       toast.success('Admin account created successfully!');
       setShowCreateAccount(false);
@@ -126,13 +119,6 @@ export const Dashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    auth.signOut();
-    sessionStorage.clear();
-    navigate('/login');
-    toast.info('Logged out successfully');
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* SEO Meta Tags */}
@@ -159,14 +145,6 @@ export const Dashboard = () => {
           <div className="flex items-center space-x-3">
             <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             <span className="text-sm text-gray-600">System Active</span>
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-              className="flex items-center space-x-2"
-            >
-              <LogOut size={16} />
-              <span>Logout</span>
-            </Button>
           </div>
         </div>
 
@@ -335,10 +313,10 @@ export const Dashboard = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Create Admin Account</h3>
+              <h3 className="text-xl font-bold text-blue-500">Create Admin Account</h3>
               <button
                 onClick={() => setShowCreateAccount(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-full transition-colors"
               >
                 ✕
               </button>
@@ -376,6 +354,7 @@ export const Dashboard = () => {
               <div className="flex space-x-3">
                 <Button
                   type="submit"
+                  variant='outline'
                   disabled={creatingAccount}
                   className="flex-1"
                 >
