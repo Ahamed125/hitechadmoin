@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {  User, LogOut } from 'lucide-react';
+import { Menu, User, LogOut } from 'lucide-react';
 import { toast } from '../../utils/toast';
 import { auth } from '../../../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
-export const Header = () => {
+export const Header = ({ onOpenSidebar = () => {} }) => {
   const navigate = useNavigate();
   const [adminEmail, setAdminEmail] = useState('');
   const [adminName, setAdminName] = useState('Admin');
@@ -58,9 +58,20 @@ export const Header = () => {
   return (
     <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Welcome back, {adminName}</h2>
-          <p className="text-xs sm:text-sm text-gray-600">Manage your college content efficiently</p>
+        <div className="flex items-center gap-3">
+          {/* Hamburger for mobile */}
+          <button
+            onClick={onOpenSidebar}
+            className="p-2 mr-1 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors md:hidden"
+            aria-label="Open sidebar"
+          >
+            <Menu size={20} />
+          </button>
+
+          <div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Welcome back, {adminName}</h2>
+            <p className="text-xs sm:text-sm text-gray-600">Manage your college content efficiently</p>
+          </div>
         </div>
         
         <div className="flex items-center gap-2 sm:gap-4">

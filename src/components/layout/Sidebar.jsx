@@ -9,8 +9,8 @@ import {
   Info,
   Settings,
   Phone,
-
-  MessageCircle
+  MessageCircle,
+  X,
 } from 'lucide-react';
 
 const navigation = [
@@ -25,45 +25,96 @@ const navigation = [
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
-export const Sidebar = () => {
+export const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   return (
-    <div className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-          Hi-Tec Admin
-        </h1>
-        <p className="text-sm text-gray-600 mt-1">College Management</p>
-      </div>
+    <>
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex w-64 bg-white border-r border-gray-200 min-h-screen flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            Hi-Tec Admin
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">College Management</p>
+        </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
-        {navigation.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-indigo-50 text-indigo-600 font-medium'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`
-            }
-          >
-            <item.icon size={20} />
-            <span>{item.name}</span>
-          </NavLink>
-        ))}
-      </nav>
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1">
+          {navigation.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-indigo-50 text-indigo-600 font-medium'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`
+              }
+            >
+              <item.icon size={20} />
+              <span>{item.name}</span>
+            </NavLink>
+          ))}
+        </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500 text-center">
-          © 2025 Hi-Tec College
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-200">
+          <div className="text-xs text-gray-500 text-center">© 2025 Hi-Tec College</div>
         </div>
       </div>
-    </div>
+
+      {/* Mobile sidebar (overlay) */}
+      {isOpen && (
+        <div className="fixed inset-0 z-40 md:hidden flex">
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+
+          {/* Panel */}
+          <div className="relative w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col shadow-lg">
+            <div className="p-4 flex items-center justify-between border-b border-gray-200">
+              <div>
+                <h1 className="text-lg font-bold">Hi-Tec Admin</h1>
+                <p className="text-xs text-gray-600">College Management</p>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-md"
+                aria-label="Close sidebar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <nav className="flex-1 p-4 space-y-1">
+              {navigation.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === '/'}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600 font-medium'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  <item.icon size={20} />
+                  <span>{item.name}</span>
+                </NavLink>
+              ))}
+            </nav>
+
+            <div className="p-4 border-t border-gray-200">
+              <div className="text-xs text-gray-500 text-center">© 2025 Hi-Tec College</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
