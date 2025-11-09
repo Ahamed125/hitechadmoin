@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Search, BookOpen, Clock, Users, Star, Tag, Settings, Calendar, Upload, Image as ImageIcon, SaveAll } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, Search, BookOpen, Clock, Users, Star, Tag, Settings, Calendar, Upload, Image as ImageIcon, SaveAll, Eye, EyeOff } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea, Select } from '../components/ui/Input';
@@ -22,6 +22,17 @@ export const Courses = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
+
+  // Price visibility state
+  const [showPrices, setShowPrices] = useState(() => {
+    const saved = localStorage.getItem('course-show-prices');
+    return saved ? JSON.parse(saved) : true;
+  });
+
+  // Save showPrices preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('course-show-prices', JSON.stringify(showPrices));
+  }, [showPrices]);
 
   // Load categories and levels from localStorage or use defaults
   const [categories, setCategories] = useState(() => {
@@ -67,7 +78,8 @@ export const Courses = () => {
       avatar: '',
       avatarAlt: ''
     },
-    outcomes: []
+    outcomes: [],
+    showPrice: true
   });
 
   const [categoryForm, setCategoryForm] = useState({
@@ -204,7 +216,8 @@ export const Courses = () => {
         avatar: '',
         avatarAlt: ''
       },
-      outcomes: []
+      outcomes: [],
+      showPrice: true
     });
     setIsModalOpen(true);
   };
@@ -225,7 +238,8 @@ export const Courses = () => {
       reviews: course.reviews === 0 ? '' : course.reviews,
       durationUnit: course.durationUnit || 'hours',
       months: course.months || '',
-      years: course.years || ''
+      years: course.years || '',
+      showPrice: course.showPrice !== undefined ? course.showPrice : true
     };
     setFormData(courseData);
     setIsModalOpen(true);
@@ -420,13 +434,16 @@ export const Courses = () => {
   };
 
   // Format price in Sri Lankan Rupees
-  const formatPrice = (price) => {
+  const formatPrice = (price, showPrice = true) => {
+    if (!showPrice) return 'Contact for Price';
     if (price === 0 || price === '') return 'Free';
     return `RS ${price.toLocaleString('en-LK')}`;
   };
 
   const filteredCourses = courses.filter(course =>
-    course.title?.toLowerCase().includes(searchTerm.toLowerCase())
+    course.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    course.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    course.instructor?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getCategoryColor = (categoryId) => {
@@ -450,79 +467,91 @@ export const Courses = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 p-3 sm:p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
         {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
               Courses Management
             </h1>
-            <p className="text-gray-600 mt-2 text-lg">Manage all courses with comprehensive CRUD operations</p>
+            <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">Manage all courses with comprehensive CRUD operations</p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
+            {/* Price Toggle Button */}
+            <Button 
+              onClick={() => setShowPrices(!showPrices)}
+              variant="outline"
+              className="bg-white text-gray-700 hover:bg-gray-50 border-gray-300 shadow-sm hover:shadow-md transition-all duration-300 text-xs sm:text-sm"
+            >
+              {showPrices ? <Eye size={16} className="mr-1 sm:mr-2" /> : <EyeOff size={16} className="mr-1 sm:mr-2" />}
+              {showPrices ? 'Hide Prices' : 'Show Prices'}
+            </Button>
+            
             <Button 
               onClick={handleSaveAll}
               disabled={savingAll}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs sm:text-sm"
             >
-              <SaveAll size={20} className="mr-2" />
-              {savingAll ? 'Saving...' : 'Save All to Database'}
+              <SaveAll size={16} className="mr-1 sm:mr-2" />
+              {savingAll ? 'Saving...' : 'Save All'}
             </Button>
             <Button 
               onClick={handleAdd}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 text-xs sm:text-sm"
             >
-              <Plus size={20} className="mr-2" />
-              Add New Course
+              <Plus size={16} className="mr-1 sm:mr-2" />
+              Add Course
             </Button>
           </div>
         </div>
 
         {/* Management Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {/* Categories Card */}
           <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-blue-200">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-blue-200 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Tag size={20} className="text-blue-600" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
+                  <Tag size={18} className="text-blue-600" />
                   Course Categories
                 </CardTitle>
-                <Button size="sm" onClick={handleAddCategory}>
-                  <Plus size={16} className="mr-1" />
+                <Button size="sm" onClick={handleAddCategory} className="text-xs">
+                  <Plus size={14} className="mr-1" />
                   Add
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-4">
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+            <CardContent className="p-2 sm:p-3 md:p-4">
+              <div className="space-y-2 max-h-48 sm:max-h-60 overflow-y-auto">
                 {categories.map(category => (
-                  <div key={category.id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full bg-${category.color}-500`}></div>
-                      <span className="font-medium text-gray-900">{category.name}</span>
+                  <div key={category.id} className="flex items-center justify-between p-2 sm:p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-${category.color}-500`}></div>
+                      <span className="font-medium text-gray-900 text-sm sm:text-base">{category.name}</span>
                     </div>
                     <div className="flex gap-1">
                       <Button 
                         size="sm" 
                         variant="ghost"
                         onClick={() => handleEditCategory(category)}
+                        className="h-8 w-8 p-0"
                       >
-                        <Edit size={14} />
+                        <Edit size={12} />
                       </Button>
                       <Button 
                         size="sm" 
                         variant="ghost"
                         onClick={() => setDeleteCategoryId(category.id)}
+                        className="h-8 w-8 p-0"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </Button>
                     </div>
                   </div>
                 ))}
                 {categories.length === 0 && (
-                  <div className="text-center py-4 text-gray-500">
+                  <div className="text-center py-3 sm:py-4 text-gray-500 text-sm sm:text-base">
                     No categories added yet
                   </div>
                 )}
@@ -532,46 +561,48 @@ export const Courses = () => {
 
           {/* Levels Card */}
           <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100/50 border-b border-green-200">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100/50 border-b border-green-200 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Star size={20} className="text-green-600" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
+                  <Star size={18} className="text-green-600" />
                   Difficulty Levels
                 </CardTitle>
-                <Button size="sm" onClick={handleAddLevel}>
-                  <Plus size={16} className="mr-1" />
+                <Button size="sm" onClick={handleAddLevel} className="text-xs">
+                  <Plus size={14} className="mr-1" />
                   Add
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-4">
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+            <CardContent className="p-2 sm:p-3 md:p-4">
+              <div className="space-y-2 max-h-48 sm:max-h-60 overflow-y-auto">
                 {levels.map(level => (
-                  <div key={level.id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full bg-${level.color}-500`}></div>
-                      <span className="font-medium text-gray-900">{level.name}</span>
+                  <div key={level.id} className="flex items-center justify-between p-2 sm:p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-${level.color}-500`}></div>
+                      <span className="font-medium text-gray-900 text-sm sm:text-base">{level.name}</span>
                     </div>
                     <div className="flex gap-1">
                       <Button 
                         size="sm" 
                         variant="ghost"
                         onClick={() => handleEditLevel(level)}
+                        className="h-8 w-8 p-0"
                       >
-                        <Edit size={14} />
+                        <Edit size={12} />
                       </Button>
                       <Button 
                         size="sm" 
                         variant="ghost"
                         onClick={() => setDeleteLevelId(level.id)}
+                        className="h-8 w-8 p-0"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </Button>
                     </div>
                   </div>
                 ))}
                 {levels.length === 0 && (
-                  <div className="text-center py-4 text-gray-500">
+                  <div className="text-center py-3 sm:py-4 text-gray-500 text-sm sm:text-base">
                     No levels added yet
                   </div>
                 )}
@@ -581,31 +612,31 @@ export const Courses = () => {
 
           {/* Quick Stats Card */}
           <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-b border-purple-200">
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen size={20} className="text-purple-600" />
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-b border-purple-200 p-3 sm:p-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
+                <BookOpen size={18} className="text-purple-600" />
                 Quick Stats
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4">
-              <div className="space-y-4">
+            <CardContent className="p-2 sm:p-3 md:p-4">
+              <div className="space-y-2 sm:space-y-3 md:space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Total Courses</span>
-                  <span className="text-2xl font-bold text-purple-600">{courses.length}</span>
+                  <span className="text-gray-600 text-sm sm:text-base">Total Courses</span>
+                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600">{courses.length}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">New Courses</span>
-                  <span className="text-2xl font-bold text-green-600">
+                  <span className="text-gray-600 text-sm sm:text-base">New Courses</span>
+                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-green-600">
                     {courses.filter(c => c.isNew).length}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Categories</span>
-                  <span className="text-2xl font-bold text-blue-600">{categories.length}</span>
+                  <span className="text-gray-600 text-sm sm:text-base">Categories</span>
+                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600">{categories.length}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Levels</span>
-                  <span className="text-2xl font-bold text-orange-600">{levels.length}</span>
+                  <span className="text-gray-600 text-sm sm:text-base">Levels</span>
+                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-orange-600">{levels.length}</span>
                 </div>
               </div>
             </CardContent>
@@ -614,173 +645,255 @@ export const Courses = () => {
 
         {/* Search and Courses Table */}
         <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-blue-200">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-blue-200 p-3 sm:p-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
               <div className="flex-1 max-w-md">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   <Input
-                    placeholder="Search courses by title..."
+                    placeholder="Search courses by title, description, or instructor..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 border-2 border-gray-300 focus:border-blue-500 transition-colors"
+                    className="pl-10 border-2 border-gray-300 focus:border-blue-500 transition-colors text-sm sm:text-base"
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span>Showing {filteredCourses.length} of {courses.length} courses</span>
+              <div className="flex items-center gap-3 sm:gap-4 text-xs text-gray-600">
+                <span className="hidden xs:inline">Showing {filteredCourses.length} of {courses.length} courses</span>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${showPrices ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <span className="hidden sm:inline">Prices {showPrices ? 'Visible' : 'Hidden'}</span>
+                  <span className="sm:hidden">{showPrices ? 'Prices On' : 'Prices Off'}</span>
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {filteredCourses.length === 0 ? (
-              <div className="text-center py-16">
-                <BookOpen size={64} className="mx-auto text-gray-400 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <div className="text-center py-8 sm:py-12 md:py-16 px-4">
+                <BookOpen size={40} className="mx-auto text-gray-400 mb-3 sm:mb-4" />
+                <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-1 sm:mb-2">
                   {searchTerm ? 'No Courses Found' : 'No Courses Available'}
                 </h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                <p className="text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base">
                   {searchTerm ? 'No courses match your search criteria.' : 'Get started by adding your first course to the platform.'}
                 </p>
-                <Button onClick={handleAdd} size="lg">
-                  <Plus size={20} className="mr-2" />
+                <Button onClick={handleAdd} size="lg" className="text-sm sm:text-base">
+                  <Plus size={18} className="mr-2" />
                   Create Your First Course
                 </Button>
               </div>
             ) : (
-              <div className="overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-200">
-                      <th className="text-left py-4 px-6 font-bold text-gray-700 uppercase text-sm">Course Details</th>
-                      <th className="text-left py-4 px-6 font-bold text-gray-700 uppercase text-sm">Category & Level</th>
-                      <th className="text-left py-4 px-6 font-bold text-gray-700 uppercase text-sm">Pricing (RS)</th>
-                      <th className="text-left py-4 px-6 font-bold text-gray-700 uppercase text-sm">Metrics</th>
-                      <th className="text-right py-4 px-6 font-bold text-gray-700 uppercase text-sm">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredCourses.map(course => (
-                      <tr 
-                        key={course.id} 
-                        className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 transition-all duration-200 group"
-                      >
-                        <td className="py-4 px-6">
-                          <div className="flex items-start gap-4">
+              <div className="overflow-x-auto">
+                <div className="min-w-full">
+                  {/* Mobile View */}
+                  <div className="block sm:hidden">
+                    <div className="space-y-3 p-3 sm:p-4">
+                      {filteredCourses.map(course => (
+                        <div key={course.id} className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-start gap-3 mb-3">
                             {course.image && (
                               <img 
                                 src={course.image} 
                                 alt={course.imageAlt}
-                                className="w-16 h-16 object-cover rounded-xl shadow-sm border border-gray-200 group-hover:shadow-md transition-shadow"
-                                onError={(e) => { e.target.src = 'https://via.placeholder.com/64'; }}
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg shadow-sm border border-gray-200"
+                                onError={(e) => { e.target.src = 'https://via.placeholder.com/48'; }}
                               />
                             )}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-bold text-gray-900 text-lg truncate">{course.title}</h3>
+                                <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">{course.title}</h3>
                                 {course.isNew && (
-                                  <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-full border border-green-200">
+                                  <span className="bg-green-100 text-green-800 text-xs font-bold px-1.5 py-0.5 rounded-full border border-green-200 shrink-0">
                                     NEW
                                   </span>
                                 )}
                               </div>
-                              <p className="text-gray-600 text-sm line-clamp-2 mb-2">{course.description}</p>
-                              {course.instructor?.name && (
-                                <div className="flex items-center gap-2">
-                                  {course.instructor.avatar && (
-                                    <img 
-                                      src={course.instructor.avatar} 
-                                      alt={course.instructor.avatarAlt}
-                                      className="w-6 h-6 rounded-full border border-gray-200"
-                                      onError={(e) => { e.target.src = 'https://via.placeholder.com/24'; }}
-                                    />
-                                  )}
-                                  <span className="text-sm text-gray-700 font-medium">{course.instructor.name}</span>
-                                  {course.instructor.title && (
-                                    <span className="text-sm text-gray-500">• {course.instructor.title}</span>
-                                  )}
-                                </div>
-                              )}
+                              <p className="text-gray-600 text-xs sm:text-sm line-clamp-2">{course.description}</p>
                             </div>
                           </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="space-y-2">
-                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border ${getCategoryColor(course.category)}`}>
-                              <Tag size={12} />
-                              {getCategoryName(course.category)}
-                            </span>
-                            <div>
-                              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${getLevelColor(course.level)}`}>
-                                {getLevelName(course.level)}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl font-bold text-gray-900">
-                                {formatPrice(course.price)}
-                              </span>
-                              {course.originalPrice > course.price && (
-                                <span className="text-sm text-gray-500 line-through">
-                                  RS {course.originalPrice.toLocaleString('en-LK')}
-                                </span>
-                              )}
-                            </div>
-                            {course.originalPrice > course.price && course.price > 0 && (
-                              <span className="inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-full">
-                                Save RS {(course.originalPrice - course.price).toLocaleString('en-LK')}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="grid grid-cols-2 gap-3 text-sm">
+                          
+                          <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                             <div className="flex items-center gap-1 text-gray-600">
-                              <Calendar size={14} className="text-blue-600" />
-                              <span>{formatDuration(course)}</span>
+                              <Tag size={10} className="text-blue-600" />
+                              <span className="truncate">{getCategoryName(course.category)}</span>
                             </div>
                             <div className="flex items-center gap-1 text-gray-600">
-                              <BookOpen size={14} className="text-green-600" />
+                              <Star size={10} className="text-yellow-500" />
+                              <span className="truncate">{getLevelName(course.level)}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-gray-600">
+                              <BookOpen size={10} className="text-green-600" />
                               <span>{formatNumber(course.lessons)} lessons</span>
                             </div>
                             <div className="flex items-center gap-1 text-gray-600">
-                              <Users size={14} className="text-purple-600" />
-                              <span>{formatNumber(course.enrolled)}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <Star size={14} className="text-yellow-500" />
-                              <span>{formatNumber(course.rating)}</span>
-                              <span className="text-gray-400">({formatNumber(course.reviews)})</span>
+                              <Calendar size={10} className="text-blue-600" />
+                              <span className="truncate">{formatDuration(course)}</span>
                             </div>
                           </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex gap-2 justify-end">
-                            <Button 
-                              size="sm" 
-                              variant="secondary" 
-                              onClick={() => handleEdit(course)}
-                              className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:shadow-md"
-                            >
-                              <Edit size={14} />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="danger" 
-                              onClick={() => setDeleteId(course.id)}
-                              className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:shadow-md"
-                            >
-                              <Trash2 size={14} />
-                            </Button>
+
+                          <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                            <div className="text-base sm:text-lg font-bold text-gray-900">
+                              {formatPrice(course.price, course.showPrice !== false && showPrices)}
+                            </div>
+                            <div className="flex gap-1 sm:gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="secondary" 
+                                onClick={() => handleEdit(course)}
+                                className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 h-8 w-8 p-0"
+                              >
+                                <Edit size={12} />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="danger" 
+                                onClick={() => setDeleteId(course.id)}
+                                className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 h-8 w-8 p-0"
+                              >
+                                <Trash2 size={12} />
+                              </Button>
+                            </div>
                           </div>
-                        </td>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Desktop View */}
+                  <table className="w-full hidden sm:table">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase text-xs md:text-sm">Course Details</th>
+                        <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase text-xs md:text-sm">Category & Level</th>
+                        <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase text-xs md:text-sm">Pricing (RS)</th>
+                        <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase text-xs md:text-sm">Metrics</th>
+                        <th className="text-right py-3 px-4 font-bold text-gray-700 uppercase text-xs md:text-sm">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {filteredCourses.map(course => (
+                        <tr 
+                          key={course.id} 
+                          className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 transition-all duration-200 group"
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-start gap-3 md:gap-4">
+                              {course.image && (
+                                <img 
+                                  src={course.image} 
+                                  alt={course.imageAlt}
+                                  className="w-12 h-12 md:w-16 md:h-16 object-cover rounded-lg md:rounded-xl shadow-sm border border-gray-200 group-hover:shadow-md transition-shadow"
+                                  onError={(e) => { e.target.src = 'https://via.placeholder.com/64'; }}
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-bold text-gray-900 text-sm md:text-base lg:text-lg truncate">{course.title}</h3>
+                                  {course.isNew && (
+                                    <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-full border border-green-200">
+                                      NEW
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-gray-600 text-xs md:text-sm line-clamp-2 mb-2">{course.description}</p>
+                                {course.instructor?.name && (
+                                  <div className="flex items-center gap-2">
+                                    {course.instructor.avatar && (
+                                      <img 
+                                        src={course.instructor.avatar} 
+                                        alt={course.instructor.avatarAlt}
+                                        className="w-5 h-5 md:w-6 md:h-6 rounded-full border border-gray-200"
+                                        onError={(e) => { e.target.src = 'https://via.placeholder.com/24'; }}
+                                      />
+                                    )}
+                                    <span className="text-xs md:text-sm text-gray-700 font-medium">{course.instructor.name}</span>
+                                    {course.instructor.title && (
+                                      <span className="text-xs md:text-sm text-gray-500">• {course.instructor.title}</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="space-y-2">
+                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(course.category)}`}>
+                                <Tag size={10} />
+                                {getCategoryName(course.category)}
+                              </span>
+                              <div>
+                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(course.level)}`}>
+                                  {getLevelName(course.level)}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg md:text-xl font-bold text-gray-900">
+                                  {formatPrice(course.price, course.showPrice !== false && showPrices)}
+                                </span>
+                                {course.showPrice !== false && showPrices && course.originalPrice > course.price && (
+                                  <span className="text-xs md:text-sm text-gray-500 line-through">
+                                    RS {course.originalPrice.toLocaleString('en-LK')}
+                                  </span>
+                                )}
+                              </div>
+                              {course.showPrice !== false && showPrices && course.originalPrice > course.price && course.price > 0 && (
+                                <span className="inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-full">
+                                  Save RS {(course.originalPrice - course.price).toLocaleString('en-LK')}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="grid grid-cols-2 gap-2 text-xs md:text-sm">
+                              <div className="flex items-center gap-1 text-gray-600">
+                                <Calendar size={12} className="text-blue-600" />
+                                <span>{formatDuration(course)}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-gray-600">
+                                <BookOpen size={12} className="text-green-600" />
+                                <span>{formatNumber(course.lessons)} lessons</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-gray-600">
+                                <Users size={12} className="text-purple-600" />
+                                <span>{formatNumber(course.enrolled)}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-gray-600">
+                                <Star size={12} className="text-yellow-500" />
+                                <span>{formatNumber(course.rating)}</span>
+                                <span className="text-gray-400">({formatNumber(course.reviews)})</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-1 md:gap-2 justify-end">
+                              <Button 
+                                size="sm" 
+                                variant="secondary" 
+                                onClick={() => handleEdit(course)}
+                                className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:shadow-md h-8 w-8 p-0"
+                              >
+                                <Edit size={12} />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="danger" 
+                                onClick={() => setDeleteId(course.id)}
+                                className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:shadow-md h-8 w-8 p-0"
+                              >
+                                <Trash2 size={12} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </CardContent>
@@ -792,41 +905,41 @@ export const Courses = () => {
           onClose={() => setIsModalOpen(false)} 
           title={
             <div className="flex items-center gap-2">
-              <BookOpen size={24} className="text-blue-600" />
+              <BookOpen size={20} className="text-blue-600" />
               {editingCourse ? 'Edit Course' : 'Add New Course'}
             </div>
           } 
           size="xl"
         >
-          <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+          <div className="space-y-4 sm:space-y-6 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
             {/* Course Basic Information */}
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-2 border-blue-200 rounded-xl p-6">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                <BookOpen size={18} className="text-blue-600" />
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-2 border-blue-200 rounded-xl p-3 sm:p-4 md:p-6">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <BookOpen size={16} className="text-blue-600" />
                 Course Basic Information
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <Input
                   label="Course Title *"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="e.g., Advanced Web Development"
-                  className="bg-white border-2 border-gray-300 focus:border-blue-500"
+                  className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
                 />
                 <Textarea
                   label="Course Description *"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Describe what students will learn in this course..."
-                  rows={4}
-                  className="bg-white border-2 border-gray-300 focus:border-blue-500"
+                  rows={3}
+                  className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
                 />
               </div>
             </div>
 
             {/* Category and Level Selection */}
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+              <div className="space-y-3 sm:space-y-4">
                 <Select
                   label="Category *"
                   value={formData.category}
@@ -835,19 +948,19 @@ export const Courses = () => {
                     value: cat.id,
                     label: cat.name
                   }))}
-                  className="bg-white border-2 border-gray-300 focus:border-blue-500"
+                  className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
                 />
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsCategoryModalOpen(true)}
-                  className="w-full"
+                  className="w-full text-xs sm:text-sm"
                 >
-                  <Settings size={14} className="mr-2" />
+                  <Settings size={12} className="mr-1 sm:mr-2" />
                   Manage Categories
                 </Button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <Select
                   label="Difficulty Level *"
                   value={formData.level}
@@ -856,33 +969,33 @@ export const Courses = () => {
                     value: level.id,
                     label: level.name
                   }))}
-                  className="bg-white border-2 border-gray-300 focus:border-blue-500"
+                  className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
                 />
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsLevelModalOpen(true)}
-                  className="w-full"
+                  className="w-full text-xs sm:text-sm"
                 >
-                  <Settings size={14} className="mr-2" />
+                  <Settings size={12} className="mr-1 sm:mr-2" />
                   Manage Levels
                 </Button>
               </div>
             </div>
 
             {/* Course Duration */}
-            <div className="bg-gradient-to-r from-green-50 to-green-100/50 border-2 border-green-200 rounded-xl p-6">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                <Calendar size={18} className="text-green-600" />
+            <div className="bg-gradient-to-r from-green-50 to-green-100/50 border-2 border-green-200 rounded-xl p-3 sm:p-4 md:p-6">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <Calendar size={16} className="text-green-600" />
                 Course Duration
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <Select
                   label="Duration Unit"
                   value={formData.durationUnit}
                   onChange={(e) => setFormData({ ...formData, durationUnit: e.target.value })}
                   options={durationUnitOptions}
-                  className="bg-white border-2 border-gray-300 focus:border-green-500"
+                  className="bg-white border-2 border-gray-300 focus:border-green-500 text-sm sm:text-base"
                 />
                 
                 {formData.durationUnit === 'hours' && (
@@ -893,12 +1006,12 @@ export const Courses = () => {
                     onChange={(e) => handleNumberChange('duration', e.target.value)}
                     placeholder="Leave empty if not applicable"
                     min="0"
-                    className="bg-white border-2 border-gray-300 focus:border-green-500"
+                    className="bg-white border-2 border-gray-300 focus:border-green-500 text-sm sm:text-base"
                   />
                 )}
                 
                 {formData.durationUnit === 'months' && (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <Select
                       label="Select Duration"
                       value={formData.months}
@@ -913,13 +1026,13 @@ export const Courses = () => {
                         { value: 9, label: '9 months' },
                         { value: 12, label: '12 months' }
                       ]}
-                      className="bg-white border-2 border-gray-300 focus:border-green-500"
+                      className="bg-white border-2 border-gray-300 focus:border-green-500 text-sm sm:text-base"
                     />
                   </div>
                 )}
                 
                 {formData.durationUnit === 'years' && (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <Select
                       label="Select Duration"
                       value={formData.years}
@@ -934,7 +1047,7 @@ export const Courses = () => {
                         { value: 4, label: '4 years' },
                         { value: 5, label: '5 years' }
                       ]}
-                      className="bg-white border-2 border-gray-300 focus:border-green-500"
+                      className="bg-white border-2 border-gray-300 focus:border-green-500 text-sm sm:text-base"
                     />
                   </div>
                 )}
@@ -942,24 +1055,24 @@ export const Courses = () => {
             </div>
 
             {/* Course Image */}
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-2 border-purple-200 rounded-xl p-6">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                <ImageIcon size={18} className="text-purple-600" />
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-2 border-purple-200 rounded-xl p-3 sm:p-4 md:p-6">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <ImageIcon size={16} className="text-purple-600" />
                 Course Image
               </h3>
               <div className="space-y-3">
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <div className="flex-1">
                     <Input
                       label="Image URL"
                       value={formData.image}
                       onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                       placeholder="https://example.com/course-image.jpg"
-                      className="bg-white border-2 border-gray-300 focus:border-purple-500"
+                      className="bg-white border-2 border-gray-300 focus:border-purple-500 text-sm sm:text-base"
                     />
                   </div>
                   <div className="flex items-end">
-                    <label className="cursor-pointer">
+                    <label className="cursor-pointer w-full sm:w-auto">
                       <input
                         type="file"
                         accept="image/*"
@@ -970,9 +1083,9 @@ export const Courses = () => {
                         type="button"
                         variant="outline"
                         disabled={uploadingImage}
-                        className="bg-white text-purple-600 hover:bg-purple-50 border-purple-200"
+                        className="bg-white text-purple-600 hover:bg-purple-50 border-purple-200 w-full sm:w-auto text-xs sm:text-sm"
                       >
-                        <Upload size={16} className="mr-2" />
+                        <Upload size={14} className="mr-1 sm:mr-2" />
                         {uploadingImage ? 'Uploading...' : 'Upload'}
                       </Button>
                     </label>
@@ -983,7 +1096,7 @@ export const Courses = () => {
                   value={formData.imageAlt}
                   onChange={(e) => setFormData({ ...formData, imageAlt: e.target.value })}
                   placeholder="Descriptive text for accessibility"
-                  className="bg-white border-2 border-gray-300 focus:border-purple-500"
+                  className="bg-white border-2 border-gray-300 focus:border-purple-500 text-sm sm:text-base"
                 />
                 {formData.image && (
                   <div className="mt-2">
@@ -991,7 +1104,7 @@ export const Courses = () => {
                     <img 
                       src={formData.image} 
                       alt="Preview" 
-                      className="w-full h-32 object-cover rounded-lg border-2 border-gray-300"
+                      className="w-full h-24 sm:h-32 object-cover rounded-lg border-2 border-gray-300"
                       onError={(e) => { e.target.src = 'https://via.placeholder.com/400x200'; }}
                     />
                   </div>
@@ -1000,40 +1113,63 @@ export const Courses = () => {
             </div>
 
             {/* Pricing */}
-            <div className="bg-gradient-to-r from-green-50 to-green-100/50 border-2 border-green-200 rounded-xl p-6">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                <Clock size={18} className="text-green-600" />
+            <div className="bg-gradient-to-r from-green-50 to-green-100/50 border-2 border-green-200 rounded-xl p-3 sm:p-4 md:p-6">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <Clock size={16} className="text-green-600" />
                 Pricing (RS)
               </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Current Price (RS)"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => handleNumberChange('price', e.target.value)}
-                  placeholder="Leave empty for free course"
-                  min="0"
-                  className="bg-white border-2 border-gray-300 focus:border-green-500"
-                />
-                <Input
-                  label="Original Price (RS)"
-                  type="number"
-                  value={formData.originalPrice}
-                  onChange={(e) => handleNumberChange('originalPrice', e.target.value)}
-                  placeholder="For showing discounts"
-                  min="0"
-                  className="bg-white border-2 border-gray-300 focus:border-green-500"
-                />
+              <div className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <Input
+                    label="Current Price (RS)"
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) => handleNumberChange('price', e.target.value)}
+                    placeholder="Leave empty for free course"
+                    min="0"
+                    className="bg-white border-2 border-gray-300 focus:border-green-500 text-sm sm:text-base"
+                  />
+                  <Input
+                    label="Original Price (RS)"
+                    type="number"
+                    value={formData.originalPrice}
+                    onChange={(e) => handleNumberChange('originalPrice', e.target.value)}
+                    placeholder="For showing discounts"
+                    min="0"
+                    className="bg-white border-2 border-gray-300 focus:border-green-500 text-sm sm:text-base"
+                  />
+                </div>
+                {/* Price Visibility Toggle */}
+                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="showPrice"
+                    checked={formData.showPrice}
+                    onChange={(e) => setFormData({ ...formData, showPrice: e.target.checked })}
+                    className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                  />
+                  <label htmlFor="showPrice" className="text-xs sm:text-sm font-medium text-gray-700 flex items-center gap-1 sm:gap-2">
+                    {formData.showPrice ? <Eye size={14} className="text-green-600" /> : <EyeOff size={14} className="text-gray-500" />}
+                    Show price to students
+                  </label>
+                </div>
+                {!formData.showPrice && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 sm:p-3">
+                    <p className="text-xs sm:text-sm text-yellow-800">
+                      When price is hidden, students will see "Contact for Price" instead of the actual price.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Course Metrics */}
-            <div className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-2 border-orange-200 rounded-xl p-6">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                <Users size={18} className="text-orange-600" />
+            <div className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-2 border-orange-200 rounded-xl p-3 sm:p-4 md:p-6">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <Users size={16} className="text-orange-600" />
                 Course Metrics
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <Input
                   label="Lessons Count"
                   type="number"
@@ -1041,7 +1177,7 @@ export const Courses = () => {
                   onChange={(e) => handleNumberChange('lessons', e.target.value)}
                   placeholder="Leave empty if not applicable"
                   min="0"
-                  className="bg-white border-2 border-gray-300 focus:border-orange-500"
+                  className="bg-white border-2 border-gray-300 focus:border-orange-500 text-sm sm:text-base"
                 />
                 <Input
                   label="Enrolled Students"
@@ -1050,7 +1186,7 @@ export const Courses = () => {
                   onChange={(e) => handleNumberChange('enrolled', e.target.value)}
                   placeholder="Leave empty if not applicable"
                   min="0"
-                  className="bg-white border-2 border-gray-300 focus:border-orange-500"
+                  className="bg-white border-2 border-gray-300 focus:border-orange-500 text-sm sm:text-base"
                 />
                 <Input
                   label="Rating (0-5)"
@@ -1061,7 +1197,7 @@ export const Courses = () => {
                   value={formData.rating}
                   onChange={(e) => handleNumberChange('rating', e.target.value)}
                   placeholder="Leave empty if not rated"
-                  className="bg-white border-2 border-gray-300 focus:border-orange-500"
+                  className="bg-white border-2 border-gray-300 focus:border-orange-500 text-sm sm:text-base"
                 />
                 <Input
                   label="Reviews Count"
@@ -1070,46 +1206,46 @@ export const Courses = () => {
                   onChange={(e) => handleNumberChange('reviews', e.target.value)}
                   placeholder="Leave empty if no reviews"
                   min="0"
-                  className="bg-white border-2 border-gray-300 focus:border-orange-500"
+                  className="bg-white border-2 border-gray-300 focus:border-orange-500 text-sm sm:text-base"
                 />
               </div>
             </div>
 
             {/* Instructor Details */}
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-2 border-purple-200 rounded-xl p-6">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                <Users size={18} className="text-purple-600" />
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-2 border-purple-200 rounded-xl p-3 sm:p-4 md:p-6">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <Users size={16} className="text-purple-600" />
                 Instructor Details
               </h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <Input
                     label="Instructor Name"
                     value={formData.instructor.name}
                     onChange={(e) => setFormData({ ...formData, instructor: { ...formData.instructor, name: e.target.value } })}
                     placeholder="e.g., John Doe"
-                    className="bg-white border-2 border-gray-300 focus:border-purple-500"
+                    className="bg-white border-2 border-gray-300 focus:border-purple-500 text-sm sm:text-base"
                   />
                   <Input
                     label="Instructor Title"
                     value={formData.instructor.title}
                     onChange={(e) => setFormData({ ...formData, instructor: { ...formData.instructor, title: e.target.value } })}
                     placeholder="e.g., Senior Software Engineer"
-                    className="bg-white border-2 border-gray-300 focus:border-purple-500"
+                    className="bg-white border-2 border-gray-300 focus:border-purple-500 text-sm sm:text-base"
                   />
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <div className="flex-1">
                     <Input
                       label="Instructor Avatar URL"
                       value={formData.instructor.avatar}
                       onChange={(e) => setFormData({ ...formData, instructor: { ...formData.instructor, avatar: e.target.value } })}
                       placeholder="https://example.com/avatar.jpg"
-                      className="bg-white border-2 border-gray-300 focus:border-purple-500"
+                      className="bg-white border-2 border-gray-300 focus:border-purple-500 text-sm sm:text-base"
                     />
                   </div>
                   <div className="flex items-end">
-                    <label className="cursor-pointer">
+                    <label className="cursor-pointer w-full sm:w-auto">
                       <input
                         type="file"
                         accept="image/*"
@@ -1120,9 +1256,9 @@ export const Courses = () => {
                         type="button"
                         variant="outline"
                         disabled={uploadingImage}
-                        className="bg-white text-purple-600 hover:bg-purple-50 border-purple-200"
+                        className="bg-white text-purple-600 hover:bg-purple-50 border-purple-200 w-full sm:w-auto text-xs sm:text-sm"
                       >
-                        <Upload size={16} className="mr-2" />
+                        <Upload size={14} className="mr-1 sm:mr-2" />
                         {uploadingImage ? 'Uploading...' : 'Upload'}
                       </Button>
                     </label>
@@ -1133,7 +1269,7 @@ export const Courses = () => {
                   value={formData.instructor.avatarAlt}
                   onChange={(e) => setFormData({ ...formData, instructor: { ...formData.instructor, avatarAlt: e.target.value } })}
                   placeholder="Description of instructor"
-                  className="bg-white border-2 border-gray-300 focus:border-purple-500"
+                  className="bg-white border-2 border-gray-300 focus:border-purple-500 text-sm sm:text-base"
                 />
                 {formData.instructor.avatar && (
                   <div className="mt-2">
@@ -1141,7 +1277,7 @@ export const Courses = () => {
                     <img 
                       src={formData.instructor.avatar} 
                       alt="Avatar Preview" 
-                      className="w-16 h-16 object-cover rounded-full border-2 border-gray-300"
+                      className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-full border-2 border-gray-300"
                       onError={(e) => { e.target.src = 'https://via.placeholder.com/64'; }}
                     />
                   </div>
@@ -1150,12 +1286,12 @@ export const Courses = () => {
             </div>
 
             {/* Learning Outcomes */}
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-2 border-blue-200 rounded-xl p-6">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                <Star size={18} className="text-blue-600" />
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-2 border-blue-200 rounded-xl p-3 sm:p-4 md:p-6">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <Star size={16} className="text-blue-600" />
                 Learning Outcomes
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {formData.outcomes.map((outcome, index) => (
                   <div key={index} className="flex gap-2 items-start">
                     <div className="flex-1">
@@ -1167,7 +1303,7 @@ export const Courses = () => {
                           setFormData({ ...formData, outcomes: newOutcomes });
                         }}
                         placeholder="What will students learn from this course?"
-                        className="bg-white border-2 border-gray-300 focus:border-blue-500"
+                        className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
                       />
                     </div>
                     <Button
@@ -1177,7 +1313,7 @@ export const Courses = () => {
                         const newOutcomes = formData.outcomes.filter((_, i) => i !== index);
                         setFormData({ ...formData, outcomes: newOutcomes });
                       }}
-                      className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 mt-1"
+                      className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 mt-1 text-xs"
                     >
                       Remove
                     </Button>
@@ -1187,7 +1323,7 @@ export const Courses = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => setFormData({ ...formData, outcomes: [...formData.outcomes, ''] })}
-                  className="bg-white text-blue-600 hover:bg-blue-50 border-blue-200"
+                  className="bg-white text-blue-600 hover:bg-blue-50 border-blue-200 text-xs sm:text-sm"
                 >
                   + Add Learning Outcome
                 </Button>
@@ -1195,7 +1331,7 @@ export const Courses = () => {
             </div>
 
             {/* New Course Toggle */}
-            <div className="flex items-center gap-2 p-3 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
+            <div className="flex items-center gap-2 p-2 sm:p-3 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
               <input
                 type="checkbox"
                 id="isNew"
@@ -1203,23 +1339,23 @@ export const Courses = () => {
                 onChange={(e) => setFormData({ ...formData, isNew: e.target.checked })}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <label htmlFor="isNew" className="text-sm font-medium text-gray-700">
+              <label htmlFor="isNew" className="text-xs sm:text-sm font-medium text-gray-700">
                 Mark as New Course (shows "New" badge)
               </label>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end pt-3 sm:pt-4 border-t border-gray-200">
               <Button 
                 variant="secondary" 
                 onClick={() => setIsModalOpen(false)}
-                className="bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300"
+                className="bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300 w-full sm:w-auto text-sm"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleSave}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg w-full sm:w-auto text-sm"
               >
                 {editingCourse ? 'Update Course' : 'Create Course'}
               </Button>
@@ -1233,19 +1369,19 @@ export const Courses = () => {
           onClose={() => setIsCategoryModalOpen(false)} 
           title={
             <div className="flex items-center gap-2">
-              <Tag size={24} className="text-blue-600" />
+              <Tag size={20} className="text-blue-600" />
               {editingCategory ? 'Edit Category' : 'Add New Category'}
             </div>
           } 
           size="md"
         >
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <Input
               label="Category Name *"
               value={categoryForm.name}
               onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
               placeholder="e.g., Programming & Development"
-              className="bg-white border-2 border-gray-300 focus:border-blue-500"
+              className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
             />
             <Select
               label="Color"
@@ -1260,19 +1396,19 @@ export const Courses = () => {
                   </div>
                 )
               }))}
-              className="bg-white border-2 border-gray-300 focus:border-blue-500"
+              className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
             />
-            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end pt-3 sm:pt-4 border-t border-gray-200">
               <Button 
                 variant="secondary" 
                 onClick={() => setIsCategoryModalOpen(false)}
-                className="bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300"
+                className="bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300 w-full sm:w-auto text-sm"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleSaveCategory}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg w-full sm:w-auto text-sm"
               >
                 {editingCategory ? 'Update Category' : 'Create Category'}
               </Button>
@@ -1286,19 +1422,19 @@ export const Courses = () => {
           onClose={() => setIsLevelModalOpen(false)} 
           title={
             <div className="flex items-center gap-2">
-              <Star size={24} className="text-green-600" />
+              <Star size={20} className="text-green-600" />
               {editingLevel ? 'Edit Level' : 'Add New Level'}
             </div>
           } 
           size="md"
         >
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <Input
               label="Level Name *"
               value={levelForm.name}
               onChange={(e) => setLevelForm({ ...levelForm, name: e.target.value })}
               placeholder="e.g., Beginner, Intermediate, Advanced"
-              className="bg-white border-2 border-gray-300 focus:border-green-500"
+              className="bg-white border-2 border-gray-300 focus:border-green-500 text-sm sm:text-base"
             />
             <Select
               label="Color"
@@ -1313,19 +1449,19 @@ export const Courses = () => {
                   </div>
                 )
               }))}
-              className="bg-white border-2 border-gray-300 focus:border-green-500"
+              className="bg-white border-2 border-gray-300 focus:border-green-500 text-sm sm:text-base"
             />
-            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end pt-3 sm:pt-4 border-t border-gray-200">
               <Button 
                 variant="secondary" 
                 onClick={() => setIsLevelModalOpen(false)}
-                className="bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300"
+                className="bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300 w-full sm:w-auto text-sm"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleSaveLevel}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg"
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md hover:shadow-lg w-full sm:w-auto text-sm"
               >
                 {editingLevel ? 'Update Level' : 'Create Level'}
               </Button>
