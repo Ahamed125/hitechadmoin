@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminProvider } from './context/AdminContext';
 import { Layout } from './components/layout/Layout';
 import { ToastContainer } from './components/ui/Toast';
@@ -19,7 +19,7 @@ import { Message } from './pages/Message';
 function App() {
   return (
     <AdminProvider>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           {/* Public Route */}
           <Route path="/login" element={<Login />} />
@@ -94,7 +94,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <ToastContainer />
-      </BrowserRouter>
+      </HashRouter>
     </AdminProvider>
   );
 }
