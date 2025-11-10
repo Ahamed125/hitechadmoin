@@ -314,7 +314,7 @@ export const FAQ = () => {
               </Button>
               <Button 
                 onClick={() => setIsCatModalOpen(true)}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 w-full sm:w-auto"
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs sm:text-sm"
               >
                 <Plus size={20} className="mr-2" />
                 Add Category
@@ -741,3 +741,4 @@ export const FAQ = () => {
     </>
   );
 };
+
