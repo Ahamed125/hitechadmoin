@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, BookOpen, Clock, Users, Star, Tag, Settings, Calendar, Upload, Image as ImageIcon, SaveAll, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Edit, Trash2, Search, BookOpen, Clock, Users, Star, Tag, Settings, Calendar, Upload, Image as ImageIcon, SaveAll, Eye, EyeOff, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea, Select } from '../components/ui/Input';
@@ -22,6 +22,10 @@ export const Courses = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
+
+  // Refs for file inputs
+  const courseImageInputRef = useRef(null);
+  const instructorImageInputRef = useRef(null);
 
   // Price visibility state
   const [showPrices, setShowPrices] = useState(() => {
@@ -123,7 +127,21 @@ export const Courses = () => {
     localStorage.setItem('course-levels', JSON.stringify(newLevels));
   };
 
-  // Handle image upload - Convert to base64 for local storage
+  // Trigger file input for course image
+  const triggerCourseImageUpload = () => {
+    if (courseImageInputRef.current) {
+      courseImageInputRef.current.click();
+    }
+  };
+
+  // Trigger file input for instructor image
+  const triggerInstructorImageUpload = () => {
+    if (instructorImageInputRef.current) {
+      instructorImageInputRef.current.click();
+    }
+  };
+
+  // Fixed image upload handler
   const handleImageUpload = async (event, type = 'course') => {
     const file = event.target.files[0];
     if (!file) return;
@@ -141,15 +159,16 @@ export const Courses = () => {
     try {
       setUploadingImage(true);
       
-      // Convert image to base64 for local storage
+      // Create a FileReader to convert image to base64
       const reader = new FileReader();
+      
       reader.onload = (e) => {
-        const imageUrl = e.target.result;
+        const base64Image = e.target.result;
         
         if (type === 'course') {
           setFormData(prev => ({ 
             ...prev, 
-            image: imageUrl,
+            image: base64Image,
             imageAlt: `Image for ${formData.title || 'course'}`
           }));
         } else if (type === 'instructor') {
@@ -157,27 +176,51 @@ export const Courses = () => {
             ...prev,
             instructor: { 
               ...prev.instructor, 
-              avatar: imageUrl,
+              avatar: base64Image,
               avatarAlt: `Avatar for ${formData.instructor.name || 'instructor'}`
             }
           }));
         }
+        
         toast.success('Image uploaded successfully!');
         setUploadingImage(false);
+        
+        // Reset the file input
+        event.target.value = '';
       };
-      
-      reader.onerror = () => {
-        toast.error('Error reading image file');
+
+      reader.onerror = (error) => {
+        console.error('Error reading file:', error);
+        toast.error('Error uploading image');
         setUploadingImage(false);
+        event.target.value = '';
       };
-      
+
+      // Read the file as data URL (base64)
       reader.readAsDataURL(file);
       
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error('Error uploading image');
       setUploadingImage(false);
+      event.target.value = '';
     }
+  };
+
+  // Clear uploaded image
+  const clearCourseImage = () => {
+    setFormData(prev => ({ ...prev, image: '', imageAlt: '' }));
+  };
+
+  const clearInstructorImage = () => {
+    setFormData(prev => ({
+      ...prev,
+      instructor: { 
+        ...prev.instructor, 
+        avatar: '', 
+        avatarAlt: '' 
+      }
+    }));
   };
 
   // Handle number input changes - only save if not empty
@@ -468,9 +511,16 @@ export const Courses = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 p-3 sm:p-4 md:p-6">
+      {/* SEO Meta Structure */}
+      <div className="sr-only" aria-hidden="true">
+        <h1>Courses Management System</h1>
+        <h2>Comprehensive course administration panel</h2>
+        <p>Manage educational courses, categories, difficulty levels, and pricing with advanced CRUD operations</p>
+      </div>
+
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
         {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
+        <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
               Courses Management
@@ -483,6 +533,7 @@ export const Courses = () => {
               onClick={() => setShowPrices(!showPrices)}
               variant="outline"
               className="bg-white text-gray-700 hover:bg-gray-50 border-gray-300 shadow-sm hover:shadow-md transition-all duration-300 text-xs sm:text-sm"
+              aria-label={showPrices ? 'Hide course prices' : 'Show course prices'}
             >
               {showPrices ? <Eye size={16} className="mr-1 sm:mr-2" /> : <EyeOff size={16} className="mr-1 sm:mr-2" />}
               {showPrices ? 'Hide Prices' : 'Show Prices'}
@@ -491,20 +542,22 @@ export const Courses = () => {
             <Button 
               onClick={handleSaveAll}
               disabled={savingAll}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs sm:text-sm"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 text-xs sm:text-sm"
+              aria-label={savingAll ? 'Saving all data to database' : 'Save all data to database'}
             >
               <SaveAll size={16} className="mr-1 sm:mr-2" />
-              {savingAll ? 'Saving...' : 'Save All'}
+              {savingAll ? 'Saving...' : 'Save All Changes'}
             </Button>
             <Button 
               onClick={handleAdd}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 text-xs sm:text-sm"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-xs sm:text-sm"
+              aria-label="Add new course"
             >
               <Plus size={16} className="mr-1 sm:mr-2" />
               Add Course
             </Button>
           </div>
-        </div>
+        </header>
 
         {/* Management Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
@@ -516,7 +569,7 @@ export const Courses = () => {
                   <Tag size={18} className="text-blue-600" />
                   Course Categories
                 </CardTitle>
-                <Button size="sm" onClick={handleAddCategory} className="text-xs">
+                <Button size="sm" onClick={handleAddCategory} className="text-xs" aria-label="Add new category">
                   <Plus size={14} className="mr-1" />
                   Add
                 </Button>
@@ -527,7 +580,7 @@ export const Courses = () => {
                 {categories.map(category => (
                   <div key={category.id} className="flex items-center justify-between p-2 sm:p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-${category.color}-500`}></div>
+                      <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-${category.color}-500`} aria-hidden="true"></div>
                       <span className="font-medium text-gray-900 text-sm sm:text-base">{category.name}</span>
                     </div>
                     <div className="flex gap-1">
@@ -536,6 +589,7 @@ export const Courses = () => {
                         variant="ghost"
                         onClick={() => handleEditCategory(category)}
                         className="h-8 w-8 p-0"
+                        aria-label={`Edit category ${category.name}`}
                       >
                         <Edit size={12} />
                       </Button>
@@ -544,6 +598,7 @@ export const Courses = () => {
                         variant="ghost"
                         onClick={() => setDeleteCategoryId(category.id)}
                         className="h-8 w-8 p-0"
+                        aria-label={`Delete category ${category.name}`}
                       >
                         <Trash2 size={12} />
                       </Button>
@@ -567,7 +622,7 @@ export const Courses = () => {
                   <Star size={18} className="text-green-600" />
                   Difficulty Levels
                 </CardTitle>
-                <Button size="sm" onClick={handleAddLevel} className="text-xs">
+                <Button size="sm" onClick={handleAddLevel} className="text-xs" aria-label="Add new level">
                   <Plus size={14} className="mr-1" />
                   Add
                 </Button>
@@ -578,7 +633,7 @@ export const Courses = () => {
                 {levels.map(level => (
                   <div key={level.id} className="flex items-center justify-between p-2 sm:p-3 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-${level.color}-500`}></div>
+                      <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-${level.color}-500`} aria-hidden="true"></div>
                       <span className="font-medium text-gray-900 text-sm sm:text-base">{level.name}</span>
                     </div>
                     <div className="flex gap-1">
@@ -587,6 +642,7 @@ export const Courses = () => {
                         variant="ghost"
                         onClick={() => handleEditLevel(level)}
                         className="h-8 w-8 p-0"
+                        aria-label={`Edit level ${level.name}`}
                       >
                         <Edit size={12} />
                       </Button>
@@ -595,6 +651,7 @@ export const Courses = () => {
                         variant="ghost"
                         onClick={() => setDeleteLevelId(level.id)}
                         className="h-8 w-8 p-0"
+                        aria-label={`Delete level ${level.name}`}
                       >
                         <Trash2 size={12} />
                       </Button>
@@ -649,19 +706,20 @@ export const Courses = () => {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
               <div className="flex-1 max-w-md">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} aria-hidden="true" />
                   <Input
                     placeholder="Search courses by title, description, or instructor..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 border-2 border-gray-300 focus:border-blue-500 transition-colors text-sm sm:text-base"
+                    aria-label="Search courses"
                   />
                 </div>
               </div>
               <div className="flex items-center gap-3 sm:gap-4 text-xs text-gray-600">
                 <span className="hidden xs:inline">Showing {filteredCourses.length} of {courses.length} courses</span>
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${showPrices ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <div className={`w-2 h-2 rounded-full ${showPrices ? 'bg-green-500' : 'bg-gray-400'}`} aria-hidden="true"></div>
                   <span className="hidden sm:inline">Prices {showPrices ? 'Visible' : 'Hidden'}</span>
                   <span className="sm:hidden">{showPrices ? 'Prices On' : 'Prices Off'}</span>
                 </div>
@@ -671,7 +729,7 @@ export const Courses = () => {
           <CardContent className="p-0">
             {filteredCourses.length === 0 ? (
               <div className="text-center py-8 sm:py-12 md:py-16 px-4">
-                <BookOpen size={40} className="mx-auto text-gray-400 mb-3 sm:mb-4" />
+                <BookOpen size={40} className="mx-auto text-gray-400 mb-3 sm:mb-4" aria-hidden="true" />
                 <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-1 sm:mb-2">
                   {searchTerm ? 'No Courses Found' : 'No Courses Available'}
                 </h3>
@@ -715,19 +773,19 @@ export const Courses = () => {
                           
                           <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                             <div className="flex items-center gap-1 text-gray-600">
-                              <Tag size={10} className="text-blue-600" />
+                              <Tag size={10} className="text-blue-600" aria-hidden="true" />
                               <span className="truncate">{getCategoryName(course.category)}</span>
                             </div>
                             <div className="flex items-center gap-1 text-gray-600">
-                              <Star size={10} className="text-yellow-500" />
+                              <Star size={10} className="text-yellow-500" aria-hidden="true" />
                               <span className="truncate">{getLevelName(course.level)}</span>
                             </div>
                             <div className="flex items-center gap-1 text-gray-600">
-                              <BookOpen size={10} className="text-green-600" />
+                              <BookOpen size={10} className="text-green-600" aria-hidden="true" />
                               <span>{formatNumber(course.lessons)} lessons</span>
                             </div>
                             <div className="flex items-center gap-1 text-gray-600">
-                              <Calendar size={10} className="text-blue-600" />
+                              <Calendar size={10} className="text-blue-600" aria-hidden="true" />
                               <span className="truncate">{formatDuration(course)}</span>
                             </div>
                           </div>
@@ -742,6 +800,7 @@ export const Courses = () => {
                                 variant="secondary" 
                                 onClick={() => handleEdit(course)}
                                 className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 h-8 w-8 p-0"
+                                aria-label={`Edit course ${course.title}`}
                               >
                                 <Edit size={12} />
                               </Button>
@@ -750,6 +809,7 @@ export const Courses = () => {
                                 variant="danger" 
                                 onClick={() => setDeleteId(course.id)}
                                 className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 h-8 w-8 p-0"
+                                aria-label={`Delete course ${course.title}`}
                               >
                                 <Trash2 size={12} />
                               </Button>
@@ -819,7 +879,7 @@ export const Courses = () => {
                           <td className="py-3 px-4">
                             <div className="space-y-2">
                               <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(course.category)}`}>
-                                <Tag size={10} />
+                                <Tag size={10} aria-hidden="true" />
                                 {getCategoryName(course.category)}
                               </span>
                               <div>
@@ -851,19 +911,19 @@ export const Courses = () => {
                           <td className="py-3 px-4">
                             <div className="grid grid-cols-2 gap-2 text-xs md:text-sm">
                               <div className="flex items-center gap-1 text-gray-600">
-                                <Calendar size={12} className="text-blue-600" />
+                                <Calendar size={12} className="text-blue-600" aria-hidden="true" />
                                 <span>{formatDuration(course)}</span>
                               </div>
                               <div className="flex items-center gap-1 text-gray-600">
-                                <BookOpen size={12} className="text-green-600" />
+                                <BookOpen size={12} className="text-green-600" aria-hidden="true" />
                                 <span>{formatNumber(course.lessons)} lessons</span>
                               </div>
                               <div className="flex items-center gap-1 text-gray-600">
-                                <Users size={12} className="text-purple-600" />
+                                <Users size={12} className="text-purple-600" aria-hidden="true" />
                                 <span>{formatNumber(course.enrolled)}</span>
                               </div>
                               <div className="flex items-center gap-1 text-gray-600">
-                                <Star size={12} className="text-yellow-500" />
+                                <Star size={12} className="text-yellow-500" aria-hidden="true" />
                                 <span>{formatNumber(course.rating)}</span>
                                 <span className="text-gray-400">({formatNumber(course.reviews)})</span>
                               </div>
@@ -875,7 +935,8 @@ export const Courses = () => {
                                 size="sm" 
                                 variant="secondary" 
                                 onClick={() => handleEdit(course)}
-                                className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:shadow-md h-8 w-8 p-0"
+                                className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 transition-opacity shadow-sm hover:shadow-md h-8 w-8 p-0"
+                                aria-label={`Edit course ${course.title}`}
                               >
                                 <Edit size={12} />
                               </Button>
@@ -883,7 +944,8 @@ export const Courses = () => {
                                 size="sm" 
                                 variant="danger" 
                                 onClick={() => setDeleteId(course.id)}
-                                className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:shadow-md h-8 w-8 p-0"
+                                className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 transition-opacity shadow-sm hover:shadow-md h-8 w-8 p-0"
+                                aria-label={`Delete course ${course.title}`}
                               >
                                 <Trash2 size={12} />
                               </Button>
@@ -910,6 +972,7 @@ export const Courses = () => {
             </div>
           } 
           size="xl"
+          aria-label={editingCourse ? 'Edit course dialog' : 'Add new course dialog'}
         >
           <div className="space-y-4 sm:space-y-6 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
             {/* Course Basic Information */}
@@ -925,6 +988,7 @@ export const Courses = () => {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="e.g., Advanced Web Development"
                   className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
+                  aria-required="true"
                 />
                 <Textarea
                   label="Course Description *"
@@ -933,6 +997,7 @@ export const Courses = () => {
                   placeholder="Describe what students will learn in this course..."
                   rows={3}
                   className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
+                  aria-required="true"
                 />
               </div>
             </div>
@@ -949,6 +1014,7 @@ export const Courses = () => {
                     label: cat.name
                   }))}
                   className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
+                  aria-required="true"
                 />
                 <Button
                   variant="outline"
@@ -970,6 +1036,7 @@ export const Courses = () => {
                     label: level.name
                   }))}
                   className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
+                  aria-required="true"
                 />
                 <Button
                   variant="outline"
@@ -1071,24 +1138,37 @@ export const Courses = () => {
                       className="bg-white border-2 border-gray-300 focus:border-purple-500 text-sm sm:text-base"
                     />
                   </div>
-                  <div className="flex items-end">
-                    <label className="cursor-pointer w-full sm:w-auto">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, 'course')}
-                        className="hidden"
-                      />
+                  <div className="flex items-end gap-2">
+                    {/* Hidden file input for course image */}
+                    <input
+                      type="file"
+                      ref={courseImageInputRef}
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, 'course')}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={triggerCourseImageUpload}
+                      disabled={uploadingImage}
+                      className="bg-white text-purple-600 hover:bg-purple-50 border-purple-200 w-full sm:w-auto text-xs sm:text-sm"
+                    >
+                      <Upload size={14} className="mr-1 sm:mr-2" />
+                      {uploadingImage ? 'Uploading...' : 'Upload from Gallery'}
+                    </Button>
+                    {formData.image && (
                       <Button
                         type="button"
-                        variant="outline"
-                        disabled={uploadingImage}
-                        className="bg-white text-purple-600 hover:bg-purple-50 border-purple-200 w-full sm:w-auto text-xs sm:text-sm"
+                        variant="danger"
+                        size="sm"
+                        onClick={clearCourseImage}
+                        className="bg-red-600 hover:bg-red-700 text-white"
                       >
-                        <Upload size={14} className="mr-1 sm:mr-2" />
-                        {uploadingImage ? 'Uploading...' : 'Upload'}
+                        <X size={14} />
                       </Button>
-                    </label>
+                    )}
                   </div>
                 </div>
                 <Input
@@ -1101,12 +1181,20 @@ export const Courses = () => {
                 {formData.image && (
                   <div className="mt-2">
                     <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
-                    <img 
-                      src={formData.image} 
-                      alt="Preview" 
-                      className="w-full h-24 sm:h-32 object-cover rounded-lg border-2 border-gray-300"
-                      onError={(e) => { e.target.src = 'https://via.placeholder.com/400x200'; }}
-                    />
+                    <div className="relative">
+                      <img 
+                        src={formData.image} 
+                        alt="Course preview" 
+                        className="w-full h-24 sm:h-32 object-cover rounded-lg border-2 border-gray-300"
+                        onError={(e) => { e.target.src = 'https://via.placeholder.com/400x200'; e.target.alt = 'Default placeholder image'; }}
+                        loading="lazy"
+                      />
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1244,24 +1332,37 @@ export const Courses = () => {
                       className="bg-white border-2 border-gray-300 focus:border-purple-500 text-sm sm:text-base"
                     />
                   </div>
-                  <div className="flex items-end">
-                    <label className="cursor-pointer w-full sm:w-auto">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, 'instructor')}
-                        className="hidden"
-                      />
+                  <div className="flex items-end gap-2">
+                    {/* Hidden file input for instructor image */}
+                    <input
+                      type="file"
+                      ref={instructorImageInputRef}
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, 'instructor')}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={triggerInstructorImageUpload}
+                      disabled={uploadingImage}
+                      className="bg-white text-purple-600 hover:bg-purple-50 border-purple-200 w-full sm:w-auto text-xs sm:text-sm"
+                    >
+                      <Upload size={14} className="mr-1 sm:mr-2" />
+                      {uploadingImage ? 'Uploading...' : 'Upload from Gallery'}
+                    </Button>
+                    {formData.instructor.avatar && (
                       <Button
                         type="button"
-                        variant="outline"
-                        disabled={uploadingImage}
-                        className="bg-white text-purple-600 hover:bg-purple-50 border-purple-200 w-full sm:w-auto text-xs sm:text-sm"
+                        variant="danger"
+                        size="sm"
+                        onClick={clearInstructorImage}
+                        className="bg-red-600 hover:bg-red-700 text-white"
                       >
-                        <Upload size={14} className="mr-1 sm:mr-2" />
-                        {uploadingImage ? 'Uploading...' : 'Upload'}
+                        <X size={14} />
                       </Button>
-                    </label>
+                    )}
                   </div>
                 </div>
                 <Input
@@ -1274,12 +1375,20 @@ export const Courses = () => {
                 {formData.instructor.avatar && (
                   <div className="mt-2">
                     <p className="text-sm font-medium text-gray-700 mb-2">Avatar Preview:</p>
-                    <img 
-                      src={formData.instructor.avatar} 
-                      alt="Avatar Preview" 
-                      className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-full border-2 border-gray-300"
-                      onError={(e) => { e.target.src = 'https://via.placeholder.com/64'; }}
-                    />
+                    <div className="relative">
+                      <img 
+                        src={formData.instructor.avatar} 
+                        alt="Instructor avatar preview" 
+                        className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-full border-2 border-gray-300"
+                        onError={(e) => { e.target.src = 'https://via.placeholder.com/64'; e.target.alt = 'Default placeholder image'; }}
+                        loading="lazy"
+                      />
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1374,6 +1483,7 @@ export const Courses = () => {
             </div>
           } 
           size="md"
+          aria-label={editingCategory ? 'Edit category dialog' : 'Add new category dialog'}
         >
           <div className="space-y-3 sm:space-y-4">
             <Input
@@ -1382,6 +1492,7 @@ export const Courses = () => {
               onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
               placeholder="e.g., Programming & Development"
               className="bg-white border-2 border-gray-300 focus:border-blue-500 text-sm sm:text-base"
+              aria-required="true"
             />
             <Select
               label="Color"
@@ -1391,7 +1502,7 @@ export const Courses = () => {
                 value: opt.value,
                 label: (
                   <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full bg-${opt.value}-500`}></div>
+                    <div className={`w-3 h-3 rounded-full bg-${opt.value}-500`} aria-hidden="true"></div>
                     {opt.label}
                   </div>
                 )
@@ -1427,6 +1538,7 @@ export const Courses = () => {
             </div>
           } 
           size="md"
+          aria-label={editingLevel ? 'Edit level dialog' : 'Add new level dialog'}
         >
           <div className="space-y-3 sm:space-y-4">
             <Input
@@ -1435,6 +1547,7 @@ export const Courses = () => {
               onChange={(e) => setLevelForm({ ...levelForm, name: e.target.value })}
               placeholder="e.g., Beginner, Intermediate, Advanced"
               className="bg-white border-2 border-gray-300 focus:border-green-500 text-sm sm:text-base"
+              aria-required="true"
             />
             <Select
               label="Color"
@@ -1444,7 +1557,7 @@ export const Courses = () => {
                 value: opt.value,
                 label: (
                   <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full bg-${opt.value}-500`}></div>
+                    <div className={`w-3 h-3 rounded-full bg-${opt.value}-500`} aria-hidden="true"></div>
                     {opt.label}
                   </div>
                 )
