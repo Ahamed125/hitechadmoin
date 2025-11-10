@@ -1,3 +1,18 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useState } from 'react';
 import { 
   Save, 
@@ -52,6 +67,7 @@ export const Homepage = () => {
   const [isNewsHeaderModalOpen, setIsNewsHeaderModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [heroForm, setHeroForm] = useState({ h1: '', h2: '', h3: '', image: '' });
   const [ctaHeaderForm, setCTAHeaderForm] = useState({ h1: '', h2: '', h3: '' });
@@ -121,31 +137,42 @@ export const Homepage = () => {
     return <Star size={size} color={color} />; // Default icon
   };
 
-  // Image upload handler
+  // Convert blob URL to base64 for Firebase storage
+  const blobUrlToBase64 = async (blobUrl) => {
+    try {
+      const response = await fetch(blobUrl);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error converting blob to base64:', error);
+      return null;
+    }
+  };
+
+  // Check if URL is a blob URL
+  const isBlobUrl = (url) => {
+    return url.startsWith('blob:');
+  };
+
+  // Image upload handler - converts blob URLs to base64 for Firebase
   const handleImageUpload = async (file, type) => {
     if (!file) return '';
     
     setUploadingImage(true);
     try {
-      // Simulate image upload - replace with your actual upload logic
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      // This would be your actual API call to upload the image
-      // const response = await fetch('/api/upload', {
-      //   method: 'POST',
-      //   body: formData
-      // });
-      // const data = await response.json();
-      
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       // For demo purposes, create a blob URL
-      const imageUrl = URL.createObjectURL(file);
+      const blobUrl = URL.createObjectURL(file);
+      
+      // Convert blob URL to base64 for Firebase compatibility
+      const base64Image = await blobUrlToBase64(blobUrl);
       
       toast.success('Image uploaded successfully!');
-      return imageUrl;
+      return base64Image; // Return base64 string instead of blob URL
     } catch (error) {
       toast.error('Failed to upload image');
       return '';
@@ -196,11 +223,18 @@ export const Homepage = () => {
   };
 
   const handleSave = async () => {
-    const success = await saveAllToFirebase();
-    if (success) {
-      toast.success('All homepage settings saved successfully to Firebase!');
-    } else {
-      toast.error('Failed to save settings to Firebase');
+    setSaving(true);
+    try {
+      const success = await saveAllToFirebase();
+      if (success) {
+        toast.success('All homepage settings saved successfully to Firebase!');
+      } else {
+        toast.error('Failed to save settings to Firebase');
+      }
+    } catch (error) {
+      toast.error('Error saving data');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -513,6 +547,17 @@ export const Homepage = () => {
     }
   };
 
+  // Get image source - handles both blob URLs and base64 strings
+  const getImageSrc = (image) => {
+    if (!image) return '';
+    // If it's a base64 string (starts with data:image)
+    if (image.startsWith('data:image')) {
+      return image;
+    }
+    // If it's a blob URL or regular URL
+    return image;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -527,40 +572,29 @@ export const Homepage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 p-6">
-      {/* SEO Meta Structure - This would be handled by your framework's head component */}
-      {/* <head>
-        <title>Homepage Management | College Admin Panel</title>
-        <meta name="description" content="Manage and optimize your college homepage sections including hero banners, call-to-action sections, statistics, and news events for better engagement and SEO performance." />
-        <meta name="keywords" content="college homepage, hero section, CTA, statistics, news events, website management, SEO optimization" />
-        <meta property="og:title" content="Homepage Management | College Admin Panel" />
-        <meta property="og:description" content="Optimize your college homepage for better user engagement and search engine visibility." />
-        <meta property="og:type" content="website" />
-        <link rel="canonical" href="/admin/homepage" />
-      </head> */}
-
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header Section with proper heading hierarchy */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+        {/* Header Section */}
         <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
               Homepage Management
             </h1>
-            <p className="text-gray-600 mt-2 text-lg">Design and manage your college homepage sections</p>
+            <p className="text-gray-600 mt-2 text-base sm:text-lg">Design and manage your college homepage sections</p>
           </div>
           <Button 
             onClick={handleSave}
-            disabled={loading}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
-            aria-label={loading ? 'Saving changes to Firebase' : 'Save all changes to Firebase'}
+            disabled={saving}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 whitespace-nowrap min-w-[200px]"
+            aria-label={saving ? 'Saving changes to Firebase' : 'Save all changes to Firebase'}
           >
             <Save size={20} className="mr-2" aria-hidden="true" />
-            {loading ? 'Saving...' : 'Save All Changes to Firebase'}
+            {saving ? 'Saving...' : 'Save All Changes'}
           </Button>
         </header>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Navigation with proper ARIA labels */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Navigation */}
           <nav aria-label="Homepage section navigation" className="lg:w-80 space-y-3">
             {tabs.map(tab => {
               const IconComponent = tab.icon;
@@ -586,9 +620,9 @@ export const Homepage = () => {
                         aria-hidden="true"
                       />
                     </div>
-                    <div>
-                      <span className="font-semibold block">{tab.label}</span>
-                      <span className="text-sm opacity-75">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-semibold block text-sm sm:text-base">{tab.label}</span>
+                      <span className="text-xs sm:text-sm opacity-75">
                         {tab.id === 'hero' && 'Manage hero slides'}
                         {tab.id === 'cta' && 'Call-to-action sections'}
                         {tab.id === 'stats' && 'Statistics and numbers'}
@@ -607,17 +641,17 @@ export const Homepage = () => {
             {activeTab === 'hero' && (
               <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
                 <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-blue-200">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                      <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <Layout className="text-blue-600" size={24} aria-hidden="true" />
+                      <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <Layout className="text-blue-600" size={20} aria-hidden="true" />
                         Hero Slides Management
                       </CardTitle>
-                      <p className="text-gray-600 mt-1">Manage the main banner slides on your homepage</p>
+                      <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage the main banner slides on your homepage</p>
                     </div>
                     <Button 
                       onClick={() => openHeroModal()}
-                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
+                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all whitespace-nowrap"
                       aria-label="Add new hero slide"
                     >
                       <Plus size={18} className="mr-2" aria-hidden="true" />
@@ -625,10 +659,10 @@ export const Homepage = () => {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   {homepage.hero?.slides?.length === 0 ? (
-                    <div className="text-center py-12" role="status" aria-label="No slides created">
-                      <Layout size={48} className="mx-auto text-gray-400 mb-4" aria-hidden="true" />
+                    <div className="text-center py-8 sm:py-12" role="status" aria-label="No slides created">
+                      <Layout size={40} className="mx-auto text-gray-400 mb-4" aria-hidden="true" />
                       <h2 className="text-lg font-semibold text-gray-900 mb-2">No Slides Created</h2>
                       <p className="text-gray-600 mb-4">Get started by adding your first hero slide</p>
                       <Button onClick={() => openHeroModal()} aria-label="Create first hero slide">
@@ -644,11 +678,11 @@ export const Homepage = () => {
                           className="group bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
                           role="listitem"
                         >
-                          <div className="flex items-start gap-4">
+                          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                             {slide.image && (
-                              <div className="relative">
+                              <div className="relative flex-shrink-0">
                                 <img 
-                                  src={slide.image} 
+                                  src={getImageSrc(slide.image)} 
                                   alt={slide.h1 || "Hero slide preview"} 
                                   className="w-20 h-20 object-cover rounded-lg shadow-md"
                                   onError={(e) => { e.target.src = 'https://via.placeholder.com/80'; e.target.alt = 'Default placeholder image'; }}
@@ -658,11 +692,11 @@ export const Homepage = () => {
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-lg text-gray-900 truncate">{slide.h1}</h3>
+                              <h3 className="font-bold text-base sm:text-lg text-gray-900 truncate">{slide.h1}</h3>
                               <h4 className="font-semibold text-gray-700 mt-1 text-sm">{slide.h2}</h4>
                               <p className="text-sm text-gray-600 mt-1 line-clamp-2">{slide.h3}</p>
                             </div>
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-2 transition-opacity justify-end sm:justify-start">
                               <Button 
                                 size="sm" 
                                 variant="secondary" 
@@ -696,12 +730,12 @@ export const Homepage = () => {
               <>
                 <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
                   <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-b border-purple-200">
-                    <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                      <Star className="text-purple-600" size={24} aria-hidden="true" />
+                    <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                      <Star className="text-purple-600" size={20} aria-hidden="true" />
                       CTA Header Section
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6 space-y-6">
+                  <CardContent className="p-4 sm:p-6 space-y-6">
                     <div className="grid gap-4">
                       <Input
                         label="Main Heading (H1)"
@@ -730,7 +764,7 @@ export const Homepage = () => {
                     </div>
                     <Button 
                       onClick={saveCTAHeader}
-                      className="bg-purple-600 hover:bg-purple-700 text-white w-full py-3 text-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                      className="bg-purple-600 hover:bg-purple-700 text-white w-full py-3 text-base sm:text-lg font-semibold shadow-md hover:shadow-lg transition-all"
                       aria-label="Save CTA header content"
                     >
                       Save Header Content
@@ -740,18 +774,18 @@ export const Homepage = () => {
 
                 <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
                   <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-b border-purple-200">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div>
-                        <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                          <Star className="text-purple-600" size={24} aria-hidden="true" />
+                        <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                          <Star className="text-purple-600" size={20} aria-hidden="true" />
                           CTA Action Cards
                         </CardTitle>
-                        <p className="text-gray-600 mt-1">Create engaging call-to-action cards</p>
+                        <p className="text-gray-600 mt-1 text-sm sm:text-base">Create engaging call-to-action cards</p>
                       </div>
                       <Button 
                         size="sm" 
                         onClick={() => openCTACardModal()}
-                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-md"
+                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-md whitespace-nowrap"
                         aria-label="Add new CTA card"
                       >
                         <Plus size={16} className="mr-1" aria-hidden="true" />
@@ -759,10 +793,10 @@ export const Homepage = () => {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     {homepage.cta?.cards?.length === 0 ? (
                       <div className="text-center py-8" role="status" aria-label="No CTA cards">
-                        <Star size={48} className="mx-auto text-gray-400 mb-4" aria-hidden="true" />
+                        <Star size={40} className="mx-auto text-gray-400 mb-4" aria-hidden="true" />
                         <h2 className="text-lg font-semibold text-gray-900 mb-2">No CTA Cards</h2>
                         <p className="text-gray-600 mb-4">Add cards to guide users through your site</p>
                         <Button onClick={() => openCTACardModal()} aria-label="Create first CTA card">
@@ -778,22 +812,22 @@ export const Homepage = () => {
                             className="group bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-purple-300 hover:shadow-lg transition-all duration-300"
                             role="listitem"
                           >
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                               <div className="flex items-center gap-4">
                                 <div 
-                                  className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md"
+                                  className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0"
                                   aria-hidden="true"
                                 >
                                   {getIconComponent(card.icon, 24, "white")}
                                 </div>
-                                <div>
-                                  <h3 className="font-bold text-gray-900">{card.h3}</h3>
+                                <div className="min-w-0">
+                                  <h3 className="font-bold text-gray-900 text-base sm:text-lg">{card.h3}</h3>
                                   <p className="text-sm text-gray-600">
                                     <span className="font-medium">Button:</span> {card.buttonName} → {card.path}
                                   </p>
                                 </div>
                               </div>
-                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex gap-2 transition-opacity justify-end sm:justify-start">
                                 <Button 
                                   size="sm" 
                                   variant="secondary" 
@@ -827,18 +861,18 @@ export const Homepage = () => {
             {activeTab === 'stats' && (
               <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
                 <CardHeader className="bg-gradient-to-r from-green-50 to-green-100/50 border-b border-green-200">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                      <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <TrendingUp className="text-green-600" size={24} aria-hidden="true" />
+                      <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <TrendingUp className="text-green-600" size={20} aria-hidden="true" />
                         Quick Statistics
                       </CardTitle>
-                      <p className="text-gray-600 mt-1">Showcase your college's achievements and numbers</p>
+                      <p className="text-gray-600 mt-1 text-sm sm:text-base">Showcase your college's achievements and numbers</p>
                     </div>
                     <Button 
                       size="sm" 
                       onClick={() => openStatModal()}
-                      className="bg-green-600 hover:bg-green-700 text-white shadow-md"
+                      className="bg-green-600 hover:bg-green-700 text-white shadow-md whitespace-nowrap"
                       aria-label="Add new statistic"
                     >
                       <Plus size={16} className="mr-1" aria-hidden="true" />
@@ -846,10 +880,10 @@ export const Homepage = () => {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   {homepage.quickStats?.length === 0 ? (
-                    <div className="text-center py-12" role="status" aria-label="No statistics added">
-                      <TrendingUp size={48} className="mx-auto text-gray-400 mb-4" aria-hidden="true" />
+                    <div className="text-center py-8 sm:py-12" role="status" aria-label="No statistics added">
+                      <TrendingUp size={40} className="mx-auto text-gray-400 mb-4" aria-hidden="true" />
                       <h2 className="text-lg font-semibold text-gray-900 mb-2">No Statistics Added</h2>
                       <p className="text-gray-600 mb-4">Add statistics to build trust with visitors</p>
                       <Button onClick={() => openStatModal()} aria-label="Add first statistic">
@@ -858,21 +892,21 @@ export const Homepage = () => {
                       </Button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6" role="list" aria-label="List of statistics">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6" role="list" aria-label="List of statistics">
                       {homepage.quickStats?.map(stat => (
                         <div 
                           key={stat.id} 
-                          className="group bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 hover:border-green-300 hover:shadow-lg transition-all duration-300"
+                          className="group bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4 sm:p-6 hover:border-green-300 hover:shadow-lg transition-all duration-300"
                           role="listitem"
                         >
                           <div className="flex items-center justify-between mb-4">
                             <div 
-                              className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg"
+                              className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
                               aria-hidden="true"
                             >
-                              {getIconComponent(stat.icon, 28, "white")}
+                              {getIconComponent(stat.icon, 24, "white")}
                             </div>
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-2 transition-opacity">
                               <Button 
                                 size="sm" 
                                 variant="secondary" 
@@ -893,7 +927,7 @@ export const Homepage = () => {
                               </Button>
                             </div>
                           </div>
-                          <p className="text-3xl font-bold text-green-600 mb-2" aria-label={`Statistic value: ${stat.number}`}>
+                          <p className="text-2xl sm:text-3xl font-bold text-green-600 mb-2" aria-label={`Statistic value: ${stat.number}`}>
                             {stat.number}
                           </p>
                           <p className="text-sm font-medium text-gray-700">{stat.text}</p>
@@ -910,18 +944,18 @@ export const Homepage = () => {
               <>
                 <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
                   <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-b border-orange-200">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div>
-                        <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                          <Calendar className="text-orange-600" size={24} aria-hidden="true" />
+                        <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                          <Calendar className="text-orange-600" size={20} aria-hidden="true" />
                           News & Events Header
                         </CardTitle>
-                        <p className="text-gray-600 mt-1">Set the title and description for your events section</p>
+                        <p className="text-gray-600 mt-1 text-sm sm:text-base">Set the title and description for your events section</p>
                       </div>
                       <Button 
                         size="sm" 
                         onClick={openNewsHeaderModal}
-                        className="bg-orange-600 hover:bg-orange-700 text-white shadow-md"
+                        className="bg-orange-600 hover:bg-orange-700 text-white shadow-md whitespace-nowrap"
                         aria-label="Edit news and events header"
                       >
                         <Edit2 size={16} className="mr-1" aria-hidden="true" />
@@ -929,9 +963,9 @@ export const Homepage = () => {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-6">
-                      <h2 className="font-bold text-xl text-gray-900 mb-2">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-4 sm:p-6">
+                      <h2 className="font-bold text-lg sm:text-xl text-gray-900 mb-2">
                         {homepage.news?.header?.title || 'Join Our Events'}
                       </h2>
                       <p className="text-orange-700 font-semibold text-sm mb-3">
@@ -946,18 +980,18 @@ export const Homepage = () => {
 
                 <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
                   <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-b border-orange-200">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div>
-                        <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                          <Calendar className="text-orange-600" size={24} aria-hidden="true" />
+                        <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                          <Calendar className="text-orange-600" size={20} aria-hidden="true" />
                           Events & Announcements
                         </CardTitle>
-                        <p className="text-gray-600 mt-1">Manage upcoming events and news</p>
+                        <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage upcoming events and news</p>
                       </div>
                       <Button 
                         size="sm" 
                         onClick={() => openNewsModal()}
-                        className="bg-orange-600 hover:bg-orange-700 text-white shadow-md"
+                        className="bg-orange-600 hover:bg-orange-700 text-white shadow-md whitespace-nowrap"
                         aria-label="Add new event"
                       >
                         <Plus size={16} className="mr-1" aria-hidden="true" />
@@ -965,10 +999,10 @@ export const Homepage = () => {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     {homepage.news?.events?.length === 0 ? (
-                      <div className="text-center py-12" role="status" aria-label="No events scheduled">
-                        <Calendar size={48} className="mx-auto text-gray-400 mb-4" aria-hidden="true" />
+                      <div className="text-center py-8 sm:py-12" role="status" aria-label="No events scheduled">
+                        <Calendar size={40} className="mx-auto text-gray-400 mb-4" aria-hidden="true" />
                         <h2 className="text-lg font-semibold text-gray-900 mb-2">No Events Scheduled</h2>
                         <p className="text-gray-600 mb-4">Add events to keep your audience engaged</p>
                         <Button onClick={() => openNewsModal()} aria-label="Schedule first event">
@@ -977,20 +1011,20 @@ export const Homepage = () => {
                         </Button>
                       </div>
                     ) : (
-                      <div className="space-y-6" role="list" aria-label="List of events">
+                      <div className="space-y-4 sm:space-y-6" role="list" aria-label="List of events">
                         {homepage.news?.events?.map(event => (
                           <article 
                             key={event.id} 
-                            className="group bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-orange-300 hover:shadow-lg transition-all duration-300"
+                            className="group bg-white border-2 border-gray-200 rounded-xl p-4 sm:p-6 hover:border-orange-300 hover:shadow-lg transition-all duration-300"
                             role="listitem"
                           >
-                            <div className="flex items-start gap-6">
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
                               {event.image && (
                                 <div className="relative flex-shrink-0">
                                   <img 
-                                    src={event.image} 
+                                    src={getImageSrc(event.image)} 
                                     alt={event.imageAlt || event.title} 
-                                    className="w-24 h-24 object-cover rounded-xl shadow-md"
+                                    className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl shadow-md"
                                     onError={(e) => { e.target.src = 'https://via.placeholder.com/96'; e.target.alt = 'Default event image'; }}
                                     loading="lazy"
                                   />
@@ -998,13 +1032,13 @@ export const Homepage = () => {
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between mb-3">
-                                  <h3 className="font-bold text-xl text-gray-900">{event.title}</h3>
-                                  <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${getEventTypeColor(event.type)}`}>
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2">
+                                  <h3 className="font-bold text-lg sm:text-xl text-gray-900">{event.title}</h3>
+                                  <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${getEventTypeColor(event.type)} self-start`}>
                                     {event.type}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-6 text-sm text-gray-600 mb-3">
+                                <div className="flex flex-wrap gap-2 sm:gap-6 text-sm text-gray-600 mb-3">
                                   <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-lg">
                                     <Calendar size={14} className="text-orange-600" aria-hidden="true" />
                                     <time dateTime={event.date}>{formatDate(event.date)}</time>
@@ -1018,9 +1052,9 @@ export const Homepage = () => {
                                     <span>{event.registrations} registered</span>
                                   </div>
                                 </div>
-                                <p className="text-gray-600 leading-relaxed">{event.description}</p>
+                                <p className="text-gray-600 leading-relaxed text-sm sm:text-base">{event.description}</p>
                               </div>
-                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex gap-2 transition-opacity justify-end sm:justify-start">
                                 <Button 
                                   size="sm" 
                                   variant="secondary" 
@@ -1139,7 +1173,7 @@ export const Homepage = () => {
                 <p className="text-sm text-gray-600 mb-2">Image Preview:</p>
                 <div className="relative">
                   <img 
-                    src={heroForm.image} 
+                    src={getImageSrc(heroForm.image)} 
                     alt="Hero slide preview" 
                     className="w-full h-40 object-cover rounded-lg border-2 border-gray-300"
                     onError={(e) => { e.target.src = 'https://via.placeholder.com/400x200'; e.target.alt = 'Default placeholder image'; }}
@@ -1436,7 +1470,7 @@ export const Homepage = () => {
                 <p className="text-sm text-gray-600 mb-2">Image Preview:</p>
                 <div className="relative">
                   <img 
-                    src={newsForm.image} 
+                    src={getImageSrc(newsForm.image)} 
                     alt={newsForm.imageAlt || "Event preview image"} 
                     className="w-full h-40 object-cover rounded-lg border-2 border-gray-300"
                     onError={(e) => { e.target.src = 'https://via.placeholder.com/400x200'; e.target.alt = 'Default event image'; }}
