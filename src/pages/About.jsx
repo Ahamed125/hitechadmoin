@@ -1,5 +1,28 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useState } from 'react';
-import { Save, Image, Play, Move, Zap } from 'lucide-react';
+import { Save, Image, Play, Move, Zap, Upload, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -9,11 +32,9 @@ import { toast } from '../utils/toast';
 
 export const About = () => {
   const { about, setAbout, saveHeroToFirebase } = useAdmin();
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeMotionTab, setActiveMotionTab] = useState('entrance');
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const handleSave = async () => {
     try {
@@ -74,71 +95,82 @@ export const About = () => {
     }));
   };
 
-  const handleImageUpload = async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select a valid image file');
-        return;
-      }
-
-      // Validate file size (5MB limit)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size should be less than 5MB');
-        return;
-      }
-
-      setImageFile(file);
-      
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-      
-      toast.success('Image selected successfully! Click "Upload Image" to generate URL.');
+  // Convert blob URL to base64 for Firebase storage
+  const blobUrlToBase64 = async (blobUrl) => {
+    try {
+      const response = await fetch(blobUrl);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error converting blob to base64:', error);
+      return null;
     }
   };
 
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImagePreview('');
+  // Image upload handler - converts blob URLs to base64 for Firebase
+  const handleImageUpload = async (file, type) => {
+    if (!file) return '';
+    
+    setUploadingImage(true);
+    try {
+      // For demo purposes, create a blob URL
+      const blobUrl = URL.createObjectURL(file);
+      
+      // Convert blob URL to base64 for Firebase compatibility
+      const base64Image = await blobUrlToBase64(blobUrl);
+      
+      toast.success('Image uploaded successfully!');
+      return base64Image; // Return base64 string instead of blob URL
+    } catch (error) {
+      toast.error('Failed to upload image');
+      return '';
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Handle file input for hero image
+  const handleHeroImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file');
+      return;
+    }
+    
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+    
+    const imageUrl = await handleImageUpload(file, 'hero');
+    if (imageUrl) {
+      updateHero('heroImage', imageUrl);
+    }
+  };
+
+  // Clear uploaded image
+  const clearHeroImage = () => {
     updateHero('heroImage', '');
     toast.success('Image removed successfully!');
   };
 
-  const simulateImageUpload = async () => {
-    if (!imageFile) {
-      toast.error('Please select an image first');
-      return;
+  // Get image source - handles both blob URLs and base64 strings
+  const getImageSrc = (image) => {
+    if (!image) return '';
+    // If it's a base64 string (starts with data:image)
+    if (image.startsWith('data:image')) {
+      return image;
     }
-
-    try {
-      setIsUploading(true);
-      toast.loading('Uploading image and generating URL...');
-      
-      // Simulate upload process with actual URL generation
-      setTimeout(() => {
-        // Generate a realistic URL based on the file
-        const fileExtension = imageFile.name.split('.').pop();
-        const fileName = imageFile.name.replace(/\.[^/.]+$/, ""); // Remove extension
-        const cleanFileName = fileName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-        const timestamp = Date.now();
-        
-        // Generate a realistic CDN URL
-        const generatedImageUrl = `https://cdn.yourdomain.com/images/about/hero/${cleanFileName}-${timestamp}.${fileExtension}`;
-        
-        // Update the hero image URL with the generated URL
-        updateHero('heroImage', generatedImageUrl);
-        setImageFile(null);
-        setIsUploading(false);
-        toast.success('Image uploaded successfully! URL generated: ' + generatedImageUrl);
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      setIsUploading(false);
-      toast.error('Failed to upload image');
-    }
+    // If it's a blob URL or regular URL
+    return image;
   };
 
   // Initialize motion settings if they don't exist
@@ -285,7 +317,7 @@ export const About = () => {
                 </div>
               </motion.div>
 
-              {/* Hero Image Upload */}
+              {/* Hero Image Upload - Updated Section */}
               <motion.div
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
@@ -296,139 +328,80 @@ export const About = () => {
                   <Image size={18} className="text-purple-600" />
                   Hero Image
                 </h3>
+                
                 <div className="space-y-4">
-                  {/* File Upload Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Upload Hero Image
-                        </label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all duration-300"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Supported formats: JPG, PNG, WebP. Max size: 5MB
-                        </p>
-                      </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <Image size={16} className="text-purple-600" aria-hidden="true" />
+                      Background Image
+                    </label>
+                    
+                    {/* Image Upload Section */}
+                    <div className="space-y-4">
+                      {/* URL Input */}
+                      <Input
+                        value={about.hero.heroImage || ''}
+                        onChange={(e) => updateHero('heroImage', e.target.value)}
+                        placeholder="https://images.unsplash.com/photo-1523050854058-8df90110c9f1"
+                        aria-required="true"
+                      />
                       
-                      {imageFile && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <Button
-                            onClick={simulateImageUpload}
-                            disabled={isUploading}
-                            className="bg-green-600 hover:bg-green-700 text-white transition-all duration-300 disabled:opacity-50"
-                          >
-                            <Save size={16} className="mr-2" />
-                            {isUploading ? 'Uploading...' : 'Upload Image'}
-                          </Button>
-                        </motion.div>
-                      )}
-                    </div>
-
-                    {/* Image Preview */}
-                    {(imagePreview || about.hero.heroImage) && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        transition={{ duration: 0.5 }}
-                        className="mt-4 overflow-hidden"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm font-medium text-gray-700">Image Preview:</p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRemoveImage}
-                            className="text-red-600 border-red-200 hover:bg-red-50 transition-all duration-300"
-                          >
-                            Remove Image
-                          </Button>
+                      {/* File Upload */}
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-purple-500 transition-colors cursor-pointer bg-gray-50 hover:bg-purple-50">
+                            <Upload size={20} className="text-purple-600" />
+                            <span className="text-sm font-medium text-purple-600">
+                              {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleHeroImageUpload}
+                              className="hidden"
+                              disabled={uploadingImage}
+                            />
+                          </label>
                         </div>
+                        
+                        {about.hero.heroImage && (
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            onClick={clearHeroImage}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            <X size={16} />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {about.hero.heroImage && (
+                      <div className="mt-3">
+                        <p className="text-sm text-gray-600 mb-2">Image Preview:</p>
                         <div className="relative">
-                          <motion.img 
-                            src={imagePreview || about.hero.heroImage} 
-                            alt="Hero preview" 
-                            className="w-full h-64 object-cover rounded-lg border-2 border-gray-300 transition-all duration-300"
-                            onError={(e) => { 
-                              e.target.src = 'https://via.placeholder.com/800x400?text=Image+Not+Found';
-                            }}
-                            whileHover={{ scale: 1.02 }}
-                            transition={{ duration: 0.3 }}
+                          <img 
+                            src={getImageSrc(about.hero.heroImage)} 
+                            alt="Hero slide preview" 
+                            className="w-full h-64 object-cover rounded-lg border-2 border-gray-300"
+                            onError={(e) => { e.target.src = 'https://via.placeholder.com/800x400?text=Image+Not+Found'; e.target.alt = 'Default placeholder image'; }}
+                            loading="lazy"
                           />
-                          {imageFile && (
-                            <motion.div 
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full"
-                            >
-                              New Upload
-                            </motion.div>
+                          {uploadingImage && (
+                            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                            </div>
                           )}
                         </div>
-                        
-                        {/* Image URL Display */}
-                        {about.hero.heroImage && !imageFile && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4 }}
-                            className="mt-2 p-3 bg-green-50 rounded-lg border border-green-200"
-                          >
-                            <p className="text-sm text-green-700 font-medium mb-1">Image URL:</p>
-                            <p className="text-sm text-green-600 break-all">{about.hero.heroImage}</p>
-                          </motion.div>
-                        )}
-                        
-                        {/* Image Info */}
-                        {imageFile && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4 }}
-                            className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200"
-                          >
-                            <p className="text-sm text-blue-700">
-                              <strong>File:</strong> {imageFile.name}
-                            </p>
-                            <p className="text-sm text-blue-700">
-                              <strong>Size:</strong> {(imageFile.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                            <p className="text-sm text-blue-700">
-                              <strong>Type:</strong> {imageFile.type}
-                            </p>
-                          </motion.div>
-                        )}
-                      </motion.div>
+                      </div>
                     )}
-
-                    {/* Manual URL Input as Fallback */}
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.5, delay: 0.4 }}
-                      className="mt-4"
-                    >
-                      <Input 
-                        label="Or Enter Image URL (Alternative)" 
-                        value={about.hero.heroImage} 
-                        onChange={(e) => updateHero('heroImage', e.target.value)} 
-                        placeholder="https://cdn.yourdomain.com/images/about/hero/hero-image.jpg"
-                        className="bg-white border-2 border-gray-300 focus:border-purple-500 transition-all duration-300"
-                      />
-                    </motion.div>
                   </div>
 
                   <Input 
                     label="Image Alt Text" 
-                    value={about.hero.imageAlt} 
+                    value={about.hero.imageAlt || ''} 
                     onChange={(e) => updateHero('imageAlt', e.target.value)} 
                     placeholder="Descriptive text for accessibility"
                     className="bg-white border-2 border-gray-300 focus:border-purple-500 transition-all duration-300"
@@ -686,14 +659,14 @@ export const About = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input 
                     label="Watch Video Text" 
-                    value={about.hero.watchVideoText} 
+                    value={about.hero.watchVideoText || ''} 
                     onChange={(e) => updateHero('watchVideoText', e.target.value)} 
                     placeholder="Watch Our Story"
                     className="bg-white border-2 border-gray-300 focus:border-green-500 transition-all duration-300"
                   />
                   <Input 
                     label="Watch Video Link" 
-                    value={about.hero.watchVideoLink} 
+                    value={about.hero.watchVideoLink || ''} 
                     onChange={(e) => updateHero('watchVideoLink', e.target.value)} 
                     placeholder="https://youtube.com/your-video"
                     className="bg-white border-2 border-gray-300 focus:border-green-500 transition-all duration-300"
@@ -702,7 +675,7 @@ export const About = () => {
                 <div className="mt-4">
                   <Input 
                     label="Explore Button Text" 
-                    value={about.hero.exploreButtonText} 
+                    value={about.hero.exploreButtonText || ''} 
                     onChange={(e) => updateHero('exploreButtonText', e.target.value)} 
                     placeholder="Explore Our Campus"
                     className="bg-white border-2 border-gray-300 focus:border-green-500 transition-all duration-300"
@@ -716,23 +689,3 @@ export const About = () => {
     </motion.div>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
