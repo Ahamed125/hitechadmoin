@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, HelpCircle, FolderOpen, ChevronDown, ChevronUp, Save, Database } from 'lucide-react';
+import { Plus, Edit, Trash2, HelpCircle, FolderOpen, ChevronDown, ChevronUp, Save, Database, Settings } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
@@ -12,9 +12,19 @@ export const FAQ = () => {
   const { faqs, setFaqs, saveAllToFirebase } = useAdmin();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [catFormData, setCatFormData] = useState({ title: '', order: 1 });
   const [faqFormData, setFaqFormData] = useState({ question: '', answer: '', order: 1 });
+  const [settingsFormData, setSettingsFormData] = useState({
+    sectionSubtitle: '',
+    sectionTitle: '',
+    sectionDescription: '',
+    contactTitle: '',
+    contactDescription: '',
+    contactPhone: '',
+    contactEmail: ''
+  });
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingFAQ, setEditingFAQ] = useState(null);
@@ -24,6 +34,21 @@ export const FAQ = () => {
   const pageTitle = "FAQ Management System | Admin Dashboard";
   const pageDescription = "Manage and organize frequently asked questions with our comprehensive FAQ management system. Add, edit, and categorize FAQs efficiently.";
   const pageKeywords = "FAQ management, frequently asked questions, admin dashboard, content management, customer support";
+
+  // Initialize settings form data when faqs context changes
+  React.useEffect(() => {
+    if (faqs.pageSettings) {
+      setSettingsFormData({
+        sectionSubtitle: faqs.pageSettings.sectionSubtitle || '',
+        sectionTitle: faqs.pageSettings.sectionTitle || '',
+        sectionDescription: faqs.pageSettings.sectionDescription || '',
+        contactTitle: faqs.pageSettings.contactTitle || '',
+        contactDescription: faqs.pageSettings.contactDescription || '',
+        contactPhone: faqs.pageSettings.contactPhone || '',
+        contactEmail: faqs.pageSettings.contactEmail || ''
+      });
+    }
+  }, [faqs.pageSettings]);
 
   const toggleCategory = (categoryId) => {
     const newExpanded = new Set(expandedCategories);
@@ -56,8 +81,15 @@ export const FAQ = () => {
       toast.error('Please enter a category title');
       return;
     }
-    const newCat = { id: Date.now(), ...catFormData, items: [] };
-    setFaqs(prev => ({ ...prev, categories: [...prev.categories, newCat] }));
+    const newCat = { 
+      id: Date.now(), 
+      ...catFormData, 
+      items: [] 
+    };
+    setFaqs(prev => ({ 
+      ...prev, 
+      categories: [...(prev.categories || []), newCat] 
+    }));
     toast.success('Category added successfully!');
     setIsCatModalOpen(false);
     setCatFormData({ title: '', order: 1 });
@@ -70,7 +102,7 @@ export const FAQ = () => {
     }
     setFaqs(prev => ({
       ...prev,
-      categories: prev.categories.map(cat =>
+      categories: (prev.categories || []).map(cat =>
         cat.id === editingCategory.id
           ? { ...cat, ...catFormData }
           : cat
@@ -91,9 +123,12 @@ export const FAQ = () => {
     const newFAQ = { id: Date.now(), ...faqFormData };
     setFaqs(prev => ({
       ...prev,
-      categories: prev.categories.map(cat =>
+      categories: (prev.categories || []).map(cat =>
         cat.id === selectedCategory.id
-          ? { ...cat, items: [...cat.items, newFAQ] }
+          ? { 
+              ...cat, 
+              items: [...(cat.items || []), newFAQ] 
+            }
           : cat
       )
     }));
@@ -109,11 +144,11 @@ export const FAQ = () => {
     }
     setFaqs(prev => ({
       ...prev,
-      categories: prev.categories.map(cat =>
+      categories: (prev.categories || []).map(cat =>
         cat.id === selectedCategory.id
           ? { 
               ...cat, 
-              items: cat.items.map(faq =>
+              items: (cat.items || []).map(faq =>
                 faq.id === editingFAQ.id
                   ? { ...faq, ...faqFormData }
                   : faq
@@ -128,9 +163,24 @@ export const FAQ = () => {
     setFaqFormData({ question: '', answer: '', order: 1 });
   };
 
+  const handleUpdateSettings = () => {
+    setFaqs(prev => ({
+      ...prev,
+      pageSettings: {
+        ...prev.pageSettings,
+        ...settingsFormData
+      }
+    }));
+    toast.success('FAQ page settings updated successfully!');
+    setIsSettingsModalOpen(false);
+  };
+
   const handleDeleteCategory = (id) => {
     if (confirm('Are you sure you want to delete this category? All FAQs within it will also be deleted.')) {
-      setFaqs(prev => ({ ...prev, categories: prev.categories.filter(c => c.id !== id) }));
+      setFaqs(prev => ({ 
+        ...prev, 
+        categories: (prev.categories || []).filter(c => c.id !== id) 
+      }));
       toast.success('Category deleted successfully!');
     }
   };
@@ -139,9 +189,12 @@ export const FAQ = () => {
     if (confirm('Are you sure you want to delete this FAQ?')) {
       setFaqs(prev => ({
         ...prev,
-        categories: prev.categories.map(cat =>
+        categories: (prev.categories || []).map(cat =>
           cat.id === catId
-            ? { ...cat, items: cat.items.filter(f => f.id !== faqId) }
+            ? { 
+                ...cat, 
+                items: (cat.items || []).filter(f => f.id !== faqId) 
+              }
             : cat
         )
       }));
@@ -151,20 +204,32 @@ export const FAQ = () => {
 
   const openEditCategoryModal = (category) => {
     setEditingCategory(category);
-    setCatFormData({ title: category.title, order: category.order });
+    setCatFormData({ 
+      title: category.title, 
+      order: category.order || 1 
+    });
     setIsCatModalOpen(true);
   };
 
   const openEditFAQModal = (category, faq) => {
     setSelectedCategory(category);
     setEditingFAQ(faq);
-    setFaqFormData({ question: faq.question, answer: faq.answer, order: faq.order });
+    setFaqFormData({ 
+      question: faq.question, 
+      answer: faq.answer, 
+      order: faq.order || 1 
+    });
     setIsModalOpen(true);
+  };
+
+  const openSettingsModal = () => {
+    setIsSettingsModalOpen(true);
   };
 
   const closeModals = () => {
     setIsModalOpen(false);
     setIsCatModalOpen(false);
+    setIsSettingsModalOpen(false);
     setEditingCategory(null);
     setEditingFAQ(null);
     setSelectedCategory(null);
@@ -182,6 +247,10 @@ export const FAQ = () => {
     ];
     return colors[index % colors.length];
   };
+
+  const totalCategories = faqs.categories?.length || 0;
+  const totalFAQs = (faqs.categories || []).reduce((total, cat) => total + (cat.items?.length || 0), 0);
+  const emptyCategories = (faqs.categories || []).filter(cat => !cat.items || cat.items.length === 0).length;
 
   return (
     <>
@@ -229,12 +298,19 @@ export const FAQ = () => {
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-end">
               <Button 
+                onClick={openSettingsModal}
+                className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 w-full sm:w-auto"
+              >
+                <Settings size={20} className="mr-2" />
+                Page Settings
+              </Button>
+              <Button 
                 onClick={handleSaveToDatabase}
                 disabled={saving}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 w-full sm:w-auto"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
               >
                 <Database size={20} className="mr-2" />
-                {saving ? 'Saving...' : 'Save All to Database'}
+                {saving ? 'Saving...' : 'Save All Changes'}
               </Button>
               <Button 
                 onClick={() => setIsCatModalOpen(true)}
@@ -255,7 +331,7 @@ export const FAQ = () => {
                     <FolderOpen className="text-blue-600" size={20} />
                   </div>
                   <div>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{faqs.categories.length}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{totalCategories}</p>
                     <p className="text-xs sm:text-sm text-gray-600">Total Categories</p>
                   </div>
                 </div>
@@ -268,9 +344,7 @@ export const FAQ = () => {
                     <HelpCircle className="text-green-600" size={20} />
                   </div>
                   <div>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                      {faqs.categories.reduce((total, cat) => total + (cat.items?.length || 0), 0)}
-                    </p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{totalFAQs}</p>
                     <p className="text-xs sm:text-sm text-gray-600">Total FAQs</p>
                   </div>
                 </div>
@@ -283,9 +357,7 @@ export const FAQ = () => {
                     <Edit className="text-purple-600" size={20} />
                   </div>
                   <div>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                      {faqs.categories.filter(cat => cat.items?.length === 0).length}
-                    </p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{emptyCategories}</p>
                     <p className="text-xs sm:text-sm text-gray-600">Empty Categories</p>
                   </div>
                 </div>
@@ -295,7 +367,7 @@ export const FAQ = () => {
 
           {/* Categories and FAQs */}
           <main>
-            {faqs.categories.length === 0 ? (
+            {!faqs.categories || faqs.categories.length === 0 ? (
               <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
                 <CardContent className="text-center py-12 sm:py-16">
                   <HelpCircle size={48} className="mx-auto text-gray-400 mb-4" />
@@ -342,7 +414,7 @@ export const FAQ = () => {
                               {category.items?.length || 0} FAQs
                             </span>
                             <span className="bg-white/80 text-gray-600 text-xs font-medium px-2 py-1 rounded-full border border-gray-200">
-                              Order: {category.order}
+                              Order: {category.order || 1}
                             </span>
                           </div>
                         </div>
@@ -376,7 +448,7 @@ export const FAQ = () => {
                     
                     {expandedCategories.has(category.id) && (
                       <CardContent className="p-4 sm:p-6">
-                        {category.items?.length === 0 ? (
+                        {!category.items || category.items.length === 0 ? (
                           <div className="text-center py-6 sm:py-8 bg-white/50 rounded-xl border-2 border-dashed border-gray-300">
                             <HelpCircle size={40} className="mx-auto text-gray-400 mb-3" />
                             <p className="text-gray-600 font-medium mb-4 text-sm sm:text-base">No FAQs in this category yet</p>
@@ -390,14 +462,14 @@ export const FAQ = () => {
                           </div>
                         ) : (
                           <div className="space-y-3 sm:space-y-4">
-                            {category.items?.map((faq, faqIndex) => (
+                            {category.items.map((faq, faqIndex) => (
                               <article 
                                 key={faq.id} 
                                 className="group bg-white border-2 border-gray-200 rounded-xl p-4 sm:p-6 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
                                 itemScope
                                 itemType="https://schema.org/Question"
                               >
-                                <div className="flex items-start justify-between">
+                                <div className="flex items-start justify-between gap-4">
                                   <div className="flex-1">
                                     <div className="flex items-start gap-3 mb-3">
                                       <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
@@ -412,7 +484,7 @@ export const FAQ = () => {
                                         </p>
                                         <div className="flex items-center gap-3 mt-3 text-xs sm:text-sm text-gray-500">
                                           <span className="bg-gray-100 px-2 py-1 rounded-full">
-                                            Order: {faq.order}
+                                            Order: {faq.order || 1}
                                           </span>
                                           <span className="bg-gray-100 px-2 py-1 rounded-full">
                                             FAQ #{faqIndex + 1}
@@ -421,7 +493,7 @@ export const FAQ = () => {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity ml-2 sm:ml-4">
+                                  <div className="flex gap-2 transition-opacity ml-2 sm:ml-4">
                                     <Button 
                                       size="sm" 
                                       onClick={() => openEditFAQModal(category, faq)}
@@ -565,6 +637,101 @@ export const FAQ = () => {
                 >
                   {editingFAQ ? <Save size={16} className="mr-2" /> : <Plus size={16} className="mr-2" />}
                   {editingFAQ ? 'Update FAQ' : 'Add FAQ'}
+                </Button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* FAQ Page Settings Modal */}
+          <Modal 
+            isOpen={isSettingsModalOpen} 
+            onClose={closeModals} 
+            title={
+              <div className="flex items-center gap-2">
+                <Settings size={20} className="text-gray-600" />
+                FAQ Page Settings
+              </div>
+            }
+            size="lg"
+          >
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-2 border-gray-200 rounded-xl p-4 sm:p-6">
+                <h3 className="font-bold text-lg text-gray-900 mb-4">Page Header Settings</h3>
+                <div className="space-y-4">
+                  <Input
+                    label="Section Subtitle"
+                    value={settingsFormData.sectionSubtitle}
+                    onChange={(e) => setSettingsFormData({...settingsFormData, sectionSubtitle: e.target.value})}
+                    placeholder="Common Questions"
+                    className="bg-white border-2 border-gray-300 focus:border-gray-500"
+                  />
+                  <Input
+                    label="Section Title"
+                    value={settingsFormData.sectionTitle}
+                    onChange={(e) => setSettingsFormData({...settingsFormData, sectionTitle: e.target.value})}
+                    placeholder="Frequently Asked Questions"
+                    className="bg-white border-2 border-gray-300 focus:border-gray-500"
+                  />
+                  <Textarea
+                    label="Section Description"
+                    value={settingsFormData.sectionDescription}
+                    onChange={(e) => setSettingsFormData({...settingsFormData, sectionDescription: e.target.value})}
+                    placeholder="Find answers to common questions about our courses and programs"
+                    rows={3}
+                    className="bg-white border-2 border-gray-300 focus:border-gray-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-2 border-blue-200 rounded-xl p-4 sm:p-6">
+                <h3 className="font-bold text-lg text-gray-900 mb-4">Contact Section Settings</h3>
+                <div className="space-y-4">
+                  <Input
+                    label="Contact Title"
+                    value={settingsFormData.contactTitle}
+                    onChange={(e) => setSettingsFormData({...settingsFormData, contactTitle: e.target.value})}
+                    placeholder="Still Have Questions?"
+                    className="bg-white border-2 border-gray-300 focus:border-blue-500"
+                  />
+                  <Textarea
+                    label="Contact Description"
+                    value={settingsFormData.contactDescription}
+                    onChange={(e) => setSettingsFormData({...settingsFormData, contactDescription: e.target.value})}
+                    placeholder="Our team is here to help you"
+                    rows={2}
+                    className="bg-white border-2 border-gray-300 focus:border-blue-500"
+                  />
+                  <Input
+                    label="Contact Phone"
+                    value={settingsFormData.contactPhone}
+                    onChange={(e) => setSettingsFormData({...settingsFormData, contactPhone: e.target.value})}
+                    placeholder="+94770044268"
+                    className="bg-white border-2 border-gray-300 focus:border-blue-500"
+                  />
+                  <Input
+                    label="Contact Email"
+                    value={settingsFormData.contactEmail}
+                    onChange={(e) => setSettingsFormData({...settingsFormData, contactEmail: e.target.value})}
+                    placeholder="ainudeen@gmail.com"
+                    className="bg-white border-2 border-gray-300 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4 border-t border-gray-200">
+                <Button 
+                  variant="secondary" 
+                  onClick={closeModals}
+                  className="bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300 order-2 sm:order-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateSettings}
+                  className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white shadow-md hover:shadow-lg order-1 sm:order-2"
+                >
+                  <Save size={16} className="mr-2" />
+                  Update Settings
                 </Button>
               </div>
             </div>
