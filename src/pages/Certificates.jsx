@@ -274,14 +274,14 @@ export const Certificates = () => {
               <Button 
                 onClick={handleSaveToDatabase}
                 disabled={saving}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 w-full sm:w-auto"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
               >
                 <Database size={20} className="mr-2" />
-                {saving ? 'Saving...' : 'Save to Database'}
+                {saving ? 'Saving...' : 'Save All Changes'}
               </Button>
               <Button 
                 onClick={openAddModal}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 w-full sm:w-auto"
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 w-full sm:w-auto"
               >
                 <Plus size={20} className="mr-2" />
                 Add Certificate
@@ -996,3 +996,20 @@ export const Certificates = () => {
     </>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
